@@ -1,0 +1,10 @@
+#all files
+*
+
+!.gitignore
+!ass4_12CS30035.l
+!ass4_12CS30035.y
+!ass4_12CS30035_translator.h
+!ass4_12CS30035_translator.cxx
+!ass4_12CS30035_main.c
+!ass4_12CS30035_test.c
