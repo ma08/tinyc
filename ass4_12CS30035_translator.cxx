@@ -12,9 +12,10 @@ enum Tp lastType;
 //int pointed;
 int offset=0;
 
-
+char* lastFunction;
 Symboltable globalSymbolTable;
 Symboltable* currentSymbolTable = &globalSymbolTable;
+Symboltable* lastSymbolTable ;
 QuadArr quads;
 int getsize(Type* type){
     if(type->typ!=T_ARRAY)
@@ -138,6 +139,9 @@ void symrow::makeFunction(Symboltable* symTab){
   this->type.next=new Type(this->type);
   this->type.typ=T_FUNCTION;
   this->nested_table=symTab;
+  struct symrow* s=symTab->gentemp(this->type.next->typ);
+  this->type.next=NULL;
+  strcpy(s->name,"retVal");
   this->size=0;
   return;
 };
@@ -212,6 +216,19 @@ void symrow::makePointer(int p){
         dum2->next=t;
       }
       return;
+    }
+    if(this->type.typ==T_FUNCTION){
+      struct symrow* s=this->nested_table->lookup("retVal");
+      while(p--){
+        struct Type* dum=new struct Type(s->type);
+        s->type.next = dum;
+        s->type.typ=T_POINTER;
+        s->size=size_pointer;
+      }      
+
+
+      return;
+
     }
     //printf("\nrrrrrn");
     while(p--){
@@ -314,6 +331,20 @@ void Quad::print(){
     case Q_ARRACC:
       printf("%s = %s[%s]",this->res,this->arg1,this->arg2);
       break;
+    case Q_FUNCSTART:
+      printf("\n");
+      printf("%s start ",this->res);
+      break;
+    case Q_FUNCEND:
+      printf("End %s : ",this->res);
+      printf("\n");
+      break;
+    case Q_FUNCALL:
+      printf("%s = call %s, %s",this->res,this->arg1,this->arg2);
+      break;
+    case Q_PARAM:
+      printf("param %s",this->res);
+      break;
     default:
       break;
   }
@@ -328,6 +359,14 @@ void QuadArr::print(){
     this->arr[i].print();
   }
     printf("\n");
+}
+
+bool Symboltable::exists(const char* s){
+  int i=0;
+  for (i = 0; i < this->size; ++i)
+    if(strcmp(this->arr[i].name,s)==0)
+      return true;
+  return false;
 }
 
 struct symrow* Symboltable::lookup(const char* s){
@@ -433,7 +472,13 @@ void QuadArr::emit(int op,char *r,int num){
   this->arr[this->size].arg2[0]='\0';
   this->size++;
 };
-
+void QuadArr::emit(int op,char *r){
+  this->arr[this->size].op=(Opcode)op;
+  strcpy(this->arr[this->size].res,r);
+  this->arr[this->size].arg1[0]='\0';
+  this->arr[this->size].arg2[0]='\0';
+  this->size++;
+};
 void QuadArr::emit(int op,int num){
   this->arr[this->size].op=(Opcode)op;
   if(num!=-1)

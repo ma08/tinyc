@@ -119,6 +119,7 @@ void yyerror(char *s);
 %type <symTab> funcdecstart
 %type <symRow> declaration init_declarator
 %type <symRow> declarator direct_declarator 
+%type <intValue> argument_expression_list_opt argument_expression_list
 
 %type <intValue> M
 
@@ -134,7 +135,17 @@ identifier_opt:
 			  ;
 	
 primary_expression:
-					IDENTIFIER {$$=currentSymbolTable->lookup($1); /*$1->print();*/}
+					IDENTIFIER 
+  {if(currentSymbolTable->exists($1)){
+        $$=currentSymbolTable->lookup($1);
+    }else{
+        if(globalSymbolTable.exists($1)){
+            $$=globalSymbolTable.lookup($1);
+        }else{
+            $$=currentSymbolTable->lookup($1);
+        }
+    }
+         /*$1->print();*/}
           |constant
          {
             $$=currentSymbolTable->gentemp(Type($1.type));
@@ -164,10 +175,14 @@ constant:
 		|CHAR_CONST {$$.type=T_CHAR; $$.cval=$1;}
 		;
 postfix_expression:
-          primary_expression {$$=$1; $$->print();}
+          primary_expression {$$=$1; /*$$->print();*/}
 					/*|postfix_expression '[' expression ']'*/
           |array_expression{$$=currentSymbolTable->gentemp($1.type->typ); quads.emit(Q_ARRACC,$$->name,$1.id_sym->name,$1.sym->name);}
-				  |postfix_expression '(' argument_expression_list_opt ')'
+					|postfix_expression '(' argument_expression_list_opt ')' {
+           $$=currentSymbolTable->gentemp($1->nested_table->lookup("retVal")->type);
+            char c[30];
+            sprintf(c,"%d",$3);
+           quads.emit(Q_FUNCALL,$$->name,$1->name,c); }
 				  |postfix_expression '.' IDENTIFIER
 				  |postfix_expression ARR IDENTIFIER
 				  |postfix_expression INC  
@@ -193,12 +208,12 @@ array_expression:
 
            |array_expression '[' expression ']' {$$.sym=currentSymbolTable->gentemp();  $$.sym->initial.intval=getsize($$.type); char c[30]; quads.emit(Q_MULT,$$.sym->name,$$.sym->name,$3.sym->name);  $$.type=$$.type->next; quads.emit(Q_PLUS,$$.sym->name,$$.sym->name,$1.sym->name); $$.id_sym=$1.id_sym;}
 
-argument_expression_list_opt:
-						  |argument_expression_list
+argument_expression_list_opt:{$$=0;}
+						  |argument_expression_list{$$=$1;}
 						  ;
 argument_expression_list:
-					  assignment_expression
-					  |argument_expression_list ',' assignment_expression
+            assignment_expression {$$=1; quads.emit(Q_PARAM,$1.sym->name);}
+            |argument_expression_list ',' assignment_expression {$$=$1+1; quads.emit(Q_PARAM,$3.sym->name);}
 					  ;
 unary_expression:
 				postfix_expression {$$=$1;}
@@ -603,14 +618,15 @@ direct_declarator:
 				   |direct_declarator '[' STATIC type_qualifier_list_opt assignment_expression ']'
 				   |direct_declarator '[' type_qualifier_list STATIC assignment_expression ']'
 				   |direct_declarator '[' type_qualifier_list_opt '*' ']'
-				   |direct_declarator '(' funcdecstart parameter_type_list funcdecend ')' { printf("iiii"); $1->makeFunction($3);}
-				   |direct_declarator '(' identifier_list_opt ')'
+				   |direct_declarator '(' funcdecstart parameter_type_list funcdecend ')' {  $1->makeFunction($3); lastFunction=$1->name;}
+				   |direct_declarator '(' identifier_list ')' {  }
+				   |direct_declarator '('funcdecstart funcdecend  ')' { $1->makeFunction($3); lastFunction=$1->name; }
 				   ;
 
 funcdecstart:
              {$$=currentSymbolTable=new Symboltable();};
 funcdecend: 
-          {currentSymbolTable = &globalSymbolTable;};
+          {lastSymbolTable=currentSymbolTable; currentSymbolTable = &globalSymbolTable;};
 pointer_opt: {$$=0;  }
 		   |pointer {  $$=$1;  }
 		   ;
@@ -640,9 +656,11 @@ parameter_declaration:
 					 declaration_specifiers declarator
 					 |declaration_specifiers
 					 ;
+/*
 identifier_list_opt:
 				   |identifier_list
 				   ;
+*/
 
 
 identifier_list:
@@ -749,8 +767,12 @@ external_declaration:
 					|declaration
 					;
 function_definition:
-				   declaration_specifiers declarator declaration_list_opt compound_statement
+				   declaration_specifiers declarator  declaration_list_opt temp1 compound_statement temp2
 				   ;
+
+temp1:{printf("qqqqqqq");currentSymbolTable=lastSymbolTable; quads.emit(Q_FUNCSTART,lastFunction);};
+
+temp2:{printf("iiiiii");currentSymbolTable=&globalSymbolTable; quads.emit(Q_FUNCEND,lastFunction);};
 
 declaration_list_opt:
 					|declaration_list

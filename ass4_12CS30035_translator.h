@@ -17,7 +17,7 @@ extern int size_char;
 enum Opcode{
   Q_PLUS=1, Q_MINUS, Q_DIVISION, Q_MODULO, Q_MULT, Q_UNARYMINUS, Q_COPY, Q_ARR, Q_IF, Q_IFFALSE, Q_REL_IFEQ, Q_REL_IFLT,
 	Q_REL_IFGT, Q_REL_IFLTE, Q_REL_IFGTE, Q_REL_IFNEQ, Q_ARRVAL, Q_ARRDEREF, Q_GOTO, Q_REL_LT , Q_REL_GT, Q_REL_GTE, Q_REL_LTE,
-  Q_REL_EQ, Q_REL_NEQ, Q_AMPERSAND, Q_XOR, Q_AROR, Q_LSH,Q_RSH,Q_ARRACC
+  Q_REL_EQ, Q_REL_NEQ, Q_AMPERSAND, Q_XOR, Q_AROR, Q_LSH,Q_RSH,Q_ARRACC,Q_FUNCSTART,Q_FUNCEND,Q_FUNCALL,Q_PARAM
 };
 enum Tp{
   T_VOID = 0, T_INT = 1, T_DOUBLE = 2, T_CHAR = 3, T_FUNCTION =4, T_POINTER=5, T_ARRAY = 6
@@ -100,10 +100,7 @@ struct symrow{
       return;
     }
     if(t->typ==T_FUNCTION){
-      printf("FUNCTION(");
-      printType(t->next);
-      printf(")");
-      t=t->next;
+      printf("FUNCTION");
       return;
     }
     switch(t->typ){
@@ -163,6 +160,7 @@ class Symboltable{
     struct symrow* gentemp(struct Type type=Type());
     void update(char* name,struct Type type,int size,int offset,union Init initial);
     void print();
+    bool exists(const char * s);
     
   private:
     struct symrow arr[MAX];
@@ -189,6 +187,7 @@ class QuadArr{
     void emit(int op, char *r, char *a1, char*a2=0);
     void emit(int op, int r, char *a1, char*a2=0);
     void emit(int op, char *r, int num);
+    void emit(int op, char *r);
     void emit(int op, int num);
     void emit(char *r, char* a);
     void emit(char *r, int num);
@@ -204,7 +203,9 @@ class QuadArr{
 };
 
 extern Symboltable globalSymbolTable;
+extern char* lastFunction;
 extern Symboltable* currentSymbolTable ;
+extern Symboltable* lastSymbolTable ;
 extern QuadArr quads;
 
 extern enum Tp lastType;

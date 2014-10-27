@@ -1,3 +1,8 @@
+char* foo(int a,int b){
+  int c=a+b;
+  return c;
+}
+
 void main(){
     int b;
  while(b){
@@ -5,5 +10,7 @@ void main(){
 
  }
  b--;
+ char *d;
+ d=foo(b,b+1);
 
 }
