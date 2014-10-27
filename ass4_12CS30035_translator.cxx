@@ -540,4 +540,60 @@ void xtobool(struct d_bool* s){
   quads.emit(Q_GOTO,-1);
 }
 
+struct symrow* xtoDouble(struct symrow* s){
+  struct symrow* t; 
+  if(s->type.typ==T_DOUBLE){
+    return s;
+  }
+  if(s->type.typ==T_INT){
+    t=currentSymbolTable->gentemp(T_DOUBLE);
+    quads.emit(Q_INT2DOUBLE,t->name,s->name);
+    return t;
+  }
+  if(s->type.typ==T_CHAR){
+    t=currentSymbolTable->gentemp(T_DOUBLE);
+    quads.emit(Q_CHAR2DOUBLE,t->name,s->name);
+    return t;
+  }
+  return s;
+}
+
+struct symrow* xtoInt(struct symrow* s){
+  struct symrow* t; 
+  if(s->type.typ==T_INT){
+    return s;
+  }
+  if(s->type.typ==T_DOUBLE){
+    t=currentSymbolTable->gentemp(T_INT);
+    quads.emit(Q_DOUBLE2INT,t->name,s->name);
+    return t;
+  }
+  if(s->type.typ==T_CHAR){
+    t=currentSymbolTable->gentemp(T_INT);
+    quads.emit(Q_CHAR2INT,t->name,s->name);
+    return t;
+  }
+  return s;
+}
+struct symrow* xtoChar(struct symrow* s){
+  struct symrow* t; 
+  if(s->type.typ==T_CHAR){
+    return s;
+  }
+  /*if(s->type.typ==T_DOUBLE){
+    t=currentSymbolTable->gentemp(T_CHAR);
+    quads.emit(Q_DOUBLE2INT,t->name,s->name);
+    return t;
+  }*/
+  if(s->type.typ==T_INT){
+    t=currentSymbolTable->gentemp(T_CHAR);
+    quads.emit(Q_INT2CHAR,t->name,s->name);
+    return t;
+  }
+  return s;
+}
+
+
+
+
 
