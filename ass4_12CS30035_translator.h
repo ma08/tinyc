@@ -5,6 +5,8 @@
 #include<stdio.h>
 #include<stdlib.h>
 using namespace std;
+#define TRUE_VAL 1
+#define FALSE_VAL 0
 
 #define MAX 100000
 #define QUADMAX 1000
@@ -222,5 +224,17 @@ vector<int>* merge(const vector<int>* p1,const vector<int>* p2);
 
 int getsize(Type* type);
 
+struct d_bool{
+    struct symrow* sym;
+    vector<int>* truelist;
+    vector<int>* falselist;
+    bool isBexp;
+    /*d_bool():sym(),truelist(),falselist(){
+      truelist=new vector<int>();
+      falselist=new vector<int>();
+
+    }*/
+  };
+void xtobool(struct d_bool* s);
 
 #endif // __TRANSLATOR_HXX

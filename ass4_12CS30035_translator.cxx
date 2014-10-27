@@ -526,3 +526,18 @@ void backpatch(const vector<int>* p, int label){
   for (i = 0; i < p->size(); ++i) 
     sprintf( quads.arr[(*p)[i]].res,"%d",label);
 };
+
+void xtobool(struct d_bool* s){
+  if(s->isBexp){
+    return;
+  }
+  s->isBexp=true;
+  s->truelist=makelist(quads.size);
+  s->falselist=makelist(quads.size+1);
+  char c[30];
+  sprintf(c,"%d",FALSE_VAL);
+  quads.emit(Q_REL_IFNEQ,-1,s->sym->name,c);
+  quads.emit(Q_GOTO,-1);
+}
+
+

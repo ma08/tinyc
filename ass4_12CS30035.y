@@ -12,9 +12,7 @@ void yyerror(char *s);
 %}
 %code requires {
   #include "ass4_12CS30035_translator.h"
-  #define TRUE_VAL 1
-  #define FALSE_VAL 0
-  #include<vector> 
+    #include<vector> 
   struct constant_val
   {
     
@@ -33,17 +31,7 @@ void yyerror(char *s);
     struct symrow* id_sym;
   };
   
-  struct d_bool{
-    struct symrow* sym;
-    vector<int>* truelist;
-    vector<int>* falselist;
-    bool isBexp;
-    /*d_bool():sym(),truelist(),falselist(){
-      truelist=new vector<int>();
-      falselist=new vector<int>();
-
-    }*/
-  };
+  
 }
 %union
 {
@@ -416,6 +404,8 @@ logical_AND_expression:
 					  inclusive_OR_expression {$$=$1;}
 					  |logical_AND_expression AND M inclusive_OR_expression
             {
+              xtobool(&$1);
+              xtobool(&$4);
               backpatch($1.truelist,$3);
               $$.truelist=$4.truelist;
               $$.falselist=merge($1.falselist,$4.falselist);
@@ -426,6 +416,8 @@ logical_OR_expression:
 					 logical_AND_expression {$$=$1;}
 					 |logical_OR_expression OR M logical_AND_expression
           {
+              xtobool(&$1);
+              xtobool(&$4);
               backpatch($1.falselist,$3);
               $$.falselist=$4.falselist;
               $$.truelist=merge($1.truelist,$4.truelist);
