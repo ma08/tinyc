@@ -295,7 +295,7 @@ shift_expression:
             }
 				;
 relational_expression:
-					 shift_expression {$$.sym=$1; $$.truelist=new vector<int>; $$.falselist=new vector<int>;}
+					 shift_expression {$$.sym=$1; $$.truelist=new vector<int>; $$.falselist=new vector<int>; $$.isBexp=false;}
 					 |relational_expression '<' shift_expression
           {
               if(typecheck($1.sym,$3)){
@@ -402,10 +402,15 @@ inclusive_OR_expression:
 					   ;
 logical_AND_expression:
 					  inclusive_OR_expression {$$=$1;}
-					  |logical_AND_expression AND M inclusive_OR_expression
+					  |logical_AND_expression AND M inclusive_OR_expression M
             {
-              xtobool(&$1);
-              backpatch($1.truelist,$3+2);
+              /*printf("iiiiiiiiiiiiiiiiiiiiiiiiiiiiii %d %d %d",$3,$5,$1.isBexp);*/
+              if(!($1.isBexp)){
+                xtobool(&$1);
+                backpatch($1.truelist,$5+2);
+              }else{
+                backpatch($1.truelist,$5);
+              }
               xtobool(&$4);
               $$.truelist=$4.truelist;
               $$.falselist=merge($1.falselist,$4.falselist);
@@ -414,10 +419,14 @@ logical_AND_expression:
 					  ;
 logical_OR_expression:
 					 logical_AND_expression {$$=$1;}
-					 |logical_OR_expression OR M logical_AND_expression
+					 |logical_OR_expression OR M logical_AND_expression M
           {
-              xtobool(&$1);
-              backpatch($1.falselist,$3+2);
+              if(!($1.isBexp)){
+                xtobool(&$1);
+                backpatch($1.falselist,$5+2);
+              }else{
+                backpatch($1.falselist,$5);
+              }
               xtobool(&$4);
               $$.falselist=$4.falselist;
               $$.truelist=merge($1.truelist,$4.truelist);
@@ -623,9 +632,12 @@ direct_declarator:
 				   |direct_declarator '[' STATIC type_qualifier_list_opt assignment_expression ']'
 				   |direct_declarator '[' type_qualifier_list STATIC assignment_expression ']'
 				   |direct_declarator '[' type_qualifier_list_opt '*' ']'
-				   |direct_declarator '(' funcdecstart parameter_type_list funcdecend ')' {  $1->makeFunction($3); lastFunction=$1->name;}
+				   |direct_declarator '(' funcdecstart parameter_type_list funcdecend ')' {
+               if($1->type.typ==T_FUNCTION){lastSymbolTable=$1->nested_table;} 
+                else {$1->makeFunction($3); }lastFunction=$1->name;}
 				   |direct_declarator '(' identifier_list ')' {  }
-				   |direct_declarator '('funcdecstart funcdecend  ')' { $1->makeFunction($3); lastFunction=$1->name; }
+				   |direct_declarator '('funcdecstart funcdecend  ')' { if($1->type.typ==T_FUNCTION){lastSymbolTable=$1->nested_table;} 
+                else {$1->makeFunction($3); }lastFunction=$1->name; }
 				   ;
 
 funcdecstart:
@@ -772,7 +784,7 @@ external_declaration:
 					|declaration
 					;
 function_definition:
-				   declaration_specifiers declarator  declaration_list_opt temp1 compound_statement M temp2 {backpatch($5,$6);}
+					 declaration_specifiers declarator  declaration_list_opt temp1 compound_statement M temp2 {/*backpatch($5,$6);*/}
 				   ;
 
 temp1:{printf("qqqqqqq");currentSymbolTable=lastSymbolTable; quads.emit(Q_FUNCSTART,lastFunction);};
