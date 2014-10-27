@@ -1,10 +1,6 @@
-void main(){
-   int b;
-   int a=2;
-   int c=0;
-   if(a&&c){
-     b++;
-   }
-   b--;
-
+int main(){
+    int b=1,c=0;
+    if(b&&c){
+        b++;
+    }
 }

@@ -345,6 +345,9 @@ void Quad::print(){
     case Q_PARAM:
       printf("param %s",this->res);
       break;
+    case Q_ARR_COPY:
+      printf("%s[%s] = %s",this->res,this->arg1,this->arg2);
+      break;
     default:
       break;
   }

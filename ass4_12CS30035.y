@@ -436,7 +436,8 @@ assignment_expression_opt: {}
 assignment_expression:
 					 conditional_expression {$$=$1;}
 					 |unary_expression assignment_operator assignment_expression
-            { if(typecheck($1,$3.sym)){
+            {
+              if(typecheck($1,$3.sym)){
                 if($3.isBexp){
                   backpatch($3.truelist,quads.size);
                   backpatch($3.falselist,quads.size+1);
@@ -445,8 +446,20 @@ assignment_expression:
                 }
                 else
                   quads.emit($1->name,$3.sym->name);
-               }
+              
+                }
             }
+           |array_expression assignment_operator assignment_expression 
+           {
+              if($3.isBexp){
+                  backpatch($3.truelist,quads.size);
+                  backpatch($3.falselist,quads.size+1);
+                  quads.emit(Q_ARR_COPY,$1.id_sym->name,$1.sym->name,"TRUE_VAL"); 
+                  quads.emit(Q_ARR_COPY,$1.id_sym->name,$1.sym->name,"FALSE_VAL"); 
+                }
+                else
+                  quads.emit(Q_ARR_COPY,$1.id_sym->name,$1.sym->name,$3.sym->name); 
+           }
 					 ;
 assignment_operator:
 				   '='
@@ -759,7 +772,7 @@ external_declaration:
 					|declaration
 					;
 function_definition:
-				   declaration_specifiers declarator  declaration_list_opt temp1 compound_statement temp2
+				   declaration_specifiers declarator  declaration_list_opt temp1 compound_statement M temp2 {backpatch($5,$6);}
 				   ;
 
 temp1:{printf("qqqqqqq");currentSymbolTable=lastSymbolTable; quads.emit(Q_FUNCSTART,lastFunction);};
