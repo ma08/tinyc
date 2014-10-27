@@ -348,6 +348,21 @@ void Quad::print(){
     case Q_ARR_COPY:
       printf("%s[%s] = %s",this->res,this->arg1,this->arg2);
       break;
+    case Q_INT2CHAR:
+      printf("%s = %s",this->res,this->arg1);
+      break;
+    case Q_INT2DOUBLE:
+      printf("%s = %s",this->res,this->arg1);
+      break;
+    case Q_CHAR2DOUBLE:
+      printf("%s = %s",this->res,this->arg1);
+      break;
+    case Q_CHAR2INT:
+      printf("%s = %s",this->res,this->arg1);
+      break;
+    case Q_DOUBLE2INT:
+      printf("%s = %s",this->res,this->arg1);
+      break;
     default:
       break;
   }

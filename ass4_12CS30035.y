@@ -405,8 +405,8 @@ logical_AND_expression:
 					  |logical_AND_expression AND M inclusive_OR_expression
             {
               xtobool(&$1);
+              backpatch($1.truelist,$3+2);
               xtobool(&$4);
-              backpatch($1.truelist,$3);
               $$.truelist=$4.truelist;
               $$.falselist=merge($1.falselist,$4.falselist);
               $$.isBexp=true;
@@ -417,8 +417,8 @@ logical_OR_expression:
 					 |logical_OR_expression OR M logical_AND_expression
           {
               xtobool(&$1);
+              backpatch($1.falselist,$3+2);
               xtobool(&$4);
-              backpatch($1.falselist,$3);
               $$.falselist=$4.falselist;
               $$.truelist=merge($1.truelist,$4.truelist);
               $$.isBexp=true;
