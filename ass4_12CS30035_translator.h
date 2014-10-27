@@ -15,8 +15,9 @@ extern int size_pointer;
 extern int size_char;
 
 enum Opcode{
-  Q_PLUS=1, Q_MINUS, Q_DIVISION, Q_MULT, Q_UNARYMINUS, Q_COPY, Q_ARR, Q_IF, Q_IFFALSE, Q_REL_IFEQ, Q_REL_IFLT,
-	Q_REL_IFGT, Q_REL_IFLTE, Q_REL_IFGTE, Q_REL_NOTE, Q_ARRVAL, Q_ARRDEREF, Q_GOTO 
+  Q_PLUS=1, Q_MINUS, Q_DIVISION, Q_MODULO, Q_MULT, Q_UNARYMINUS, Q_COPY, Q_ARR, Q_IF, Q_IFFALSE, Q_REL_IFEQ, Q_REL_IFLT,
+	Q_REL_IFGT, Q_REL_IFLTE, Q_REL_IFGTE, Q_REL_IFNEQ, Q_ARRVAL, Q_ARRDEREF, Q_GOTO, Q_REL_LT , Q_REL_GT, Q_REL_GTE, Q_REL_LTE,
+  Q_REL_EQ, Q_REL_NEQ, Q_AMPERSAND, Q_XOR, Q_AROR, Q_LSH,Q_RSH,Q_ARRACC
 };
 enum Tp{
   T_VOID = 0, T_INT = 1, T_DOUBLE = 2, T_CHAR = 3, T_FUNCTION =4, T_POINTER=5, T_ARRAY = 6
@@ -76,6 +77,7 @@ struct symrow{
   }
   void makePointer(int p);
   void makeArray(int length);
+  void makeFunction(Symboltable* symTab);
 
   static void printType(const struct Type *t){
     if(t==NULL){
@@ -92,6 +94,13 @@ struct symrow{
     }
     if(t->typ==T_POINTER){
       printf("POINTER(");
+      printType(t->next);
+      printf(")");
+      t=t->next;
+      return;
+    }
+    if(t->typ==T_FUNCTION){
+      printf("FUNCTION(");
       printType(t->next);
       printf(")");
       t=t->next;
@@ -178,17 +187,19 @@ class Quad{
 class QuadArr{
   public:
     void emit(int op, char *r, char *a1, char*a2=0);
+    void emit(int op, int r, char *a1, char*a2=0);
     void emit(int op, char *r, int num);
     void emit(int op, int num);
     void emit(char *r, char* a);
+    void emit(char *r, int num);
     void print();
 
-    friend void backpatch(const vector<int>& p, int label);
+    friend void backpatch(const vector<int>* p, int label);
 
+    int size;
   private:
     Quad arr[QUADMAX];
     //int size=0;
-    int size;
 
 };
 
@@ -201,12 +212,14 @@ extern enum Tp lastType;
 //extern int pointed;
 extern int offset;
 
+void backpatch(const vector<int>* p, int label);
 
-void typecheck(struct symrow& e1 , struct symrow& e2);
+bool typecheck(struct symrow* e1 , struct symrow* e2);
 
 vector<int>* makelist(int i);
-vector<int>* merge(const vector<int>& p1,const vector<int>& p2);
+vector<int>* merge(const vector<int>* p1,const vector<int>* p2);
 
+int getsize(Type* type);
 
 
 #endif // __TRANSLATOR_HXX

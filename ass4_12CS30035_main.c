@@ -7,5 +7,6 @@ extern char* yytext;
 int main() { 
 	yyparse();
   currentSymbolTable->print();
+  quads.print();
 	return 0;
 }

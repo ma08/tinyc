@@ -66,7 +66,7 @@ ENUM_CONST 8982398
 "_Bool"			{ return(BOOL); }
 "_Complex"		{ return(COMPLEX); }
 "_Imaginary"	{ return(IMAGINARY); }
-{IDENTIFIER}    {/*yylval.symRow=currentSymbolTable->lookup(yytext);*/  return(IDENTIFIER); }
+{IDENTIFIER}    {  strcpy(yylval.charArray,yytext);/*yylval.symRow=currentSymbolTable->lookup(yytext);*/  return(IDENTIFIER); }
 {ENUM_CONST}    { return(ENUMARATION_CONSTANT); }
 {INT_CONST}     { yylval.intValue = atoi( yytext ); return(INT_CONST); }
 {DOUBLE_CONST}   { yylval.doubleValue = atof( yytext ); return(DOUBLE_CONST); }

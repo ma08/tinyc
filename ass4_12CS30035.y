@@ -12,8 +12,12 @@ void yyerror(char *s);
 %}
 %code requires {
   #include "ass4_12CS30035_translator.h"
+  #define TRUE_VAL 1
+  #define FALSE_VAL 0
+  #include<vector> 
   struct constant_val
   {
+    
       enum Tp type;
       union
       {
@@ -22,15 +26,39 @@ void yyerror(char *s);
           char cval;
       };
   };
+  struct array_type{
+
+    Type* type;
+    struct symrow* sym;
+    struct symrow* id_sym;
+  };
+  
+  struct d_bool{
+    struct symrow* sym;
+    vector<int>* truelist;
+    vector<int>* falselist;
+    bool isBexp;
+    /*d_bool():sym(),truelist(),falselist(){
+      truelist=new vector<int>();
+      falselist=new vector<int>();
+
+    }*/
+  };
 }
 %union
 {
   struct constant_val conval;
+  Symboltable* symTab;
+  struct d_bool boool;
+  vector<int>* nextlist;
+  struct array_type array_exp;
+  
   enum Tp typeValue;
   int intValue; 
   double doubleValue;
   char charValue;
   char *stringValue;
+  char charArray[30];
   struct symrow* symRow;
 }
 
@@ -40,7 +68,7 @@ void yyerror(char *s);
 %token RESTRICT ENUM UNION BOOL IMAGINARY COMPLEX SIZEOF STRUCT
 %token ENUMARATION_CONSTANT
 
-%token <symRow> IDENTIFIER
+%token <charArray> IDENTIFIER
 
 %token <intValue> INT_CONST
 %token <doubleValue> DOUBLE_CONST
@@ -79,31 +107,38 @@ void yyerror(char *s);
 
 %type <typeValue> type_specifier
 
+%type <array_exp> array_expression
+
 
 %start translation_unit
 /*%type <symRow> assignment_expression*/
 
 %type <symRow> primary_expression postfix_expression unary_expression cast_expression
-%type <symRow> multiplicative_expression additive_expression shift_expression relational_expression equality_expression
-%type <symRow> AND_expression exclusive_OR_expression inclusive_OR_expression logical_AND_expression logical_OR_expression
-%type <symRow> conditional_expression assignment_expression assignment_expression_opt initializer
-%type <symRow> init_declarator_list init_declarator_list_opt expression
-
+%type <symRow> multiplicative_expression additive_expression shift_expression  
+%type <symRow> init_declarator_list init_declarator_list_opt 
+%type <symTab> funcdecstart
 %type <symRow> declaration init_declarator
 %type <symRow> declarator direct_declarator 
 
+%type <intValue> M
+
+%type <boool> logical_AND_expression logical_OR_expression inclusive_OR_expression relational_expression equality_expression expression_opt
+%type <boool> AND_expression exclusive_OR_expression  conditional_expression expression assignment_expression assignment_expression_opt initializer
+
+
+%type <nextlist> statement labeled_statement compound_statement jump_statement iteration_statement expression_statement selection_statement 
+%type <nextlist> block_item_list block_item_list_opt block_item  N
 %%
 identifier_opt:
 			  |IDENTIFIER
 			  ;
 	
 primary_expression:
-				  IDENTIFIER {$$=$1;}
+					IDENTIFIER {$$=currentSymbolTable->lookup($1); /*$1->print();*/}
           |constant
          {
             $$=currentSymbolTable->gentemp(Type($1.type));
 
-            /*printf("kkkkkkkkkkkkkaaaa%d",$1.type);*/
             switch($1.type){
               case T_INT:
                 /*printf("kkkkkkkkkkkkk%d",$1.ival);*/
@@ -120,7 +155,7 @@ primary_expression:
             }
          }
 				 |STR_LITERAL{}
-				 | '(' expression ')' {$$=$2;}
+				 | '(' expression ')' {$$=$2.sym;}
 				  ;
 constant:
 		INT_CONST { $$.type=T_INT; $$.ival=$1;}
@@ -129,16 +164,35 @@ constant:
 		|CHAR_CONST {$$.type=T_CHAR; $$.cval=$1;}
 		;
 postfix_expression:
-				  primary_expression {$$=$1;}
-				  |postfix_expression '[' expression ']'
+          primary_expression {$$=$1; $$->print();}
+					/*|postfix_expression '[' expression ']'*/
+          |array_expression{$$=currentSymbolTable->gentemp($1.type->typ); quads.emit(Q_ARRACC,$$->name,$1.id_sym->name,$1.sym->name);}
 				  |postfix_expression '(' argument_expression_list_opt ')'
 				  |postfix_expression '.' IDENTIFIER
 				  |postfix_expression ARR IDENTIFIER
-				  |postfix_expression INC 
-				  |postfix_expression DEC
+				  |postfix_expression INC  
+          {
+            $$=currentSymbolTable->gentemp(Type($1->type.typ));
+            $$->setInitial($$->type.typ,$1->initial);
+            quads.emit($$->name,$1->name);
+            quads.emit(Q_PLUS,$1->name,$$->name,"1");
+
+          }
+          |postfix_expression DEC{
+            $$=currentSymbolTable->gentemp(Type($1->type.typ));
+            $$->setInitial($$->type.typ,$1->initial);
+            quads.emit($$->name,$1->name);
+            quads.emit(Q_MINUS,$1->name,$$->name,"1");
+          }
 				  |'(' type_name ')' '{' initializer_list '}' {}
 				  |'(' type_name ')' '{' initializer_list ',' '}'{}
 				  ;
+
+array_expression:
+            IDENTIFIER '[' expression ']'  {$$.sym=currentSymbolTable->gentemp(); $$.id_sym=currentSymbolTable->lookup($1); $$.type=&($$.id_sym->type); $$.sym->initial.intval=getsize($$.type); char c[30]; quads.emit(Q_MULT,$$.sym->name,$$.sym->name,$3.sym->name);  $$.type=$$.type->next;}
+
+           |array_expression '[' expression ']' {$$.sym=currentSymbolTable->gentemp();  $$.sym->initial.intval=getsize($$.type); char c[30]; quads.emit(Q_MULT,$$.sym->name,$$.sym->name,$3.sym->name);  $$.type=$$.type->next; quads.emit(Q_PLUS,$$.sym->name,$$.sym->name,$1.sym->name); $$.id_sym=$1.id_sym;}
+
 argument_expression_list_opt:
 						  |argument_expression_list
 						  ;
@@ -148,8 +202,16 @@ argument_expression_list:
 					  ;
 unary_expression:
 				postfix_expression {$$=$1;}
-				|INC unary_expression {}
-				|DEC unary_expression {}
+        |INC unary_expression {
+            $$=currentSymbolTable->gentemp(Type($2->type.typ));
+            quads.emit(Q_PLUS,$2->name,$2->name,"1");
+            quads.emit($$->name,$2->name);
+        }
+        |DEC unary_expression {
+            $$=currentSymbolTable->gentemp(Type($2->type.typ));
+            quads.emit(Q_MINUS,$2->name,$2->name,"1");
+            quads.emit($$->name,$2->name);
+         }
 				|unary_operator cast_expression {}
 				|SIZEOF unary_expression {}
 				|SIZEOF '(' type_name ')' {}
@@ -168,55 +230,196 @@ cast_expression:
 			   ;
 multiplicative_expression:
 						cast_expression {$$=$1;}
-						|multiplicative_expression '*' cast_expression
+						|multiplicative_expression '*' cast_expression 
+            {
+              if(typecheck($1,$3)){
+                $$=currentSymbolTable->gentemp(Type($1->type.typ));
+                quads.emit(Q_MULT,$$->name,$1->name,$3->name);
+              }
+ 
+            }
 						|multiplicative_expression '/' cast_expression
+            {
+              if(typecheck($1,$3)){
+                $$=currentSymbolTable->gentemp(Type($1->type.typ));
+                quads.emit(Q_DIVISION,$$->name,$1->name,$3->name);
+              }
+ 
+            }
 						|multiplicative_expression '%' cast_expression
+            {
+              if(typecheck($1,$3)){
+                $$=currentSymbolTable->gentemp(Type($1->type.typ));
+                quads.emit(Q_MODULO,$$->name,$1->name,$3->name);
+              }
+ 
+            }
 						;
 additive_expression:
 				   multiplicative_expression {$$=$1;}
 				   |additive_expression '+' multiplicative_expression
+            {
+              if(typecheck($1,$3)){
+                $$=currentSymbolTable->gentemp(Type($1->type.typ));
+                quads.emit(Q_PLUS,$$->name,$1->name,$3->name);
+              }
+ 
+            }
 				   |additive_expression '-' multiplicative_expression
+            {
+              if(typecheck($1,$3)){
+                $$=currentSymbolTable->gentemp(Type($1->type.typ));
+                quads.emit(Q_MINUS,$$->name,$1->name,$3->name);
+              }
+ 
+            }
 				   ;
 shift_expression:
 				additive_expression {$$=$1;}
 				|shift_expression LSH additive_expression
+          {
+              if(typecheck($1,$3)){
+                $$=currentSymbolTable->gentemp(Type());
+                quads.emit(Q_LSH,$$->name,$1->name,$3->name);
+              }
+            }
 				|shift_expression RSH additive_expression
+          {
+              if(typecheck($1,$3)){
+                $$=currentSymbolTable->gentemp(Type());
+                quads.emit(Q_RSH,$$->name,$1->name,$3->name);
+              }
+            }
 				;
 relational_expression:
-					 shift_expression {$$=$1;}
+					 shift_expression {$$.sym=$1; $$.truelist=new vector<int>; $$.falselist=new vector<int>;}
 					 |relational_expression '<' shift_expression
+          {
+              if(typecheck($1.sym,$3)){
+                $$.sym=currentSymbolTable->gentemp(Type());
+                $$.truelist=makelist(quads.size);
+                $$.falselist=makelist(quads.size+1);
+                quads.emit(Q_REL_IFLT,-1,$1.sym->name,$3->name);
+                quads.emit(Q_GOTO,-1);
+                $$.isBexp=true;
+              }
+          }
 					 |relational_expression '>' shift_expression
+          {
+              if(typecheck($1.sym,$3)){
+                $$.sym=currentSymbolTable->gentemp(Type());
+                $$.truelist=makelist(quads.size);
+                $$.falselist=makelist(quads.size+1);
+
+                quads.emit(Q_REL_IFGT,-1,$1.sym->name,$3->name);
+                quads.emit(Q_GOTO,-1);
+                $$.isBexp=true;
+                
+              }
+          }
 					 |relational_expression RANGB_EQ shift_expression
+           {
+              if(typecheck($1.sym,$3)){
+                $$.sym=currentSymbolTable->gentemp(Type());
+                $$.truelist=makelist(quads.size);
+                $$.falselist=makelist(quads.size+1);
+
+                quads.emit(Q_REL_IFGTE,-1,$1.sym->name,$3->name);
+                quads.emit(Q_GOTO,-1);
+                $$.isBexp=true;
+              }
+            }
 					 |relational_expression LANGB_EQ shift_expression
+           {
+              if(typecheck($1.sym,$3)){
+                $$.sym=currentSymbolTable->gentemp(Type());
+                $$.truelist=makelist(quads.size);
+                $$.falselist=makelist(quads.size+1);
+
+                quads.emit(Q_REL_IFLTE,-1,$1.sym->name,$3->name);
+                quads.emit(Q_GOTO,-1);
+                $$.isBexp=true;
+              }
+            }
 					 ;
 equality_expression:
 				   relational_expression {$$=$1;}
 				   |equality_expression DOUBLE_EQ relational_expression
+           {
+              if(typecheck($1.sym,$3.sym)){
+                $$.sym=currentSymbolTable->gentemp(Type());
+                $$.truelist=makelist(quads.size);
+                $$.falselist=makelist(quads.size+1);
+                quads.emit(Q_REL_IFEQ,-1,$1.sym->name,$3.sym->name);
+                quads.emit(Q_GOTO,-1);
+                $$.isBexp=true;
+              }
+            }
 				   |relational_expression EXCL_EQ relational_expression
+           {
+              if(typecheck($1.sym,$3.sym)){
+                $$.sym=currentSymbolTable->gentemp(Type());
+                $$.truelist=makelist(quads.size);
+                $$.falselist=makelist(quads.size+1);
+                quads.emit(Q_REL_IFNEQ,-1,$1.sym->name,$3.sym->name);
+                quads.emit(Q_GOTO,-1);
+                $$.isBexp=true;
+              }
+            }
 				   ;
 AND_expression:
 			  equality_expression {$$=$1;}
 			  |AND_expression '&' equality_expression
+          {
+              if(typecheck($1.sym,$3.sym)){
+                $$.sym=currentSymbolTable->gentemp(Type());
+                quads.emit(Q_AMPERSAND,$$.sym->name,$1.sym->name,$3.sym->name);
+              }
+            }
 			  ;
 exclusive_OR_expression:
 					   AND_expression {$$=$1;}
-					   |exclusive_OR_expression '^' M AND_expression
+					   |exclusive_OR_expression '^'  AND_expression
+            {
+              if(typecheck($1.sym,$3.sym)){
+                $$.sym=currentSymbolTable->gentemp(Type());
+                quads.emit(Q_XOR,$$.sym->name,$1.sym->name,$3.sym->name);
+              }
+            }
 					   ;
 inclusive_OR_expression:
 					   exclusive_OR_expression {$$=$1;}
 					   |inclusive_OR_expression '|' exclusive_OR_expression
+            {
+              if(typecheck($1.sym,$3.sym)){
+                $$.sym=currentSymbolTable->gentemp(Type());
+                quads.emit(Q_AROR,$$.sym->name,$1.sym->name,$3.sym->name);
+              }
+            }
 					   ;
 logical_AND_expression:
 					  inclusive_OR_expression {$$=$1;}
 					  |logical_AND_expression AND M inclusive_OR_expression
+            {
+              backpatch($1.truelist,$3);
+              $$.truelist=$4.truelist;
+              $$.falselist=merge($1.falselist,$4.falselist);
+              $$.isBexp=true;
+            }
 					  ;
 logical_OR_expression:
 					 logical_AND_expression {$$=$1;}
 					 |logical_OR_expression OR M logical_AND_expression
+          {
+              backpatch($1.falselist,$3);
+              $$.falselist=$4.falselist;
+              $$.truelist=merge($1.truelist,$4.truelist);
+              $$.isBexp=true;
+          }
 					 ;
 conditional_expression:
 					  logical_OR_expression {$$=$1;}
-					  |logical_OR_expression N '?' M expression N ':' M conditional_expression
+					  |logical_OR_expression N '?' M expression N ':' M conditional_expression{}
 					  ;
 
 assignment_expression_opt: {}
@@ -226,6 +429,17 @@ assignment_expression_opt: {}
 assignment_expression:
 					 conditional_expression {$$=$1;}
 					 |unary_expression assignment_operator assignment_expression
+            { if(typecheck($1,$3.sym)){
+                if($3.isBexp){
+                  backpatch($3.truelist,quads.size);
+                  backpatch($3.falselist,quads.size+1);
+                  quads.emit($1->name,TRUE_VAL); 
+                  quads.emit($1->name,FALSE_VAL); 
+                }
+                else
+                  quads.emit($1->name,$3.sym->name);
+               }
+            }
 					 ;
 assignment_operator:
 				   '='
@@ -240,12 +454,12 @@ assignment_operator:
 				   |BIAND_ASSIGN
 				   |BIOR_ASSIGN
 				   ;
-expression_opt:
-			  |expression
+expression_opt:{}
+			  |expression {$$=$1;}
 			  ;
 
 expression:
-		  assignment_expression
+		  assignment_expression {$$=$1;}
 		  |expression ',' assignment_expression
 		  ;
 constant_expression:
@@ -281,7 +495,21 @@ init_declarator:
          |declarator '=' initializer {
           $$=$1;
           /*printf("xxxxxxxxx%dxxxxxxxxxx%lf",$3->type.typ,$3->initial.doubleval);*/
-          $$->setInitial($3->type.typ,$3->initial);
+
+          if(typecheck($1,$3.sym)){
+            if($3.isBexp){
+                  backpatch($3.truelist,quads.size);
+                  backpatch($3.falselist,quads.size+1);
+                  quads.emit($1->name,TRUE_VAL); 
+                  quads.emit($1->name,FALSE_VAL); 
+                }
+            else
+              quads.emit($1->name,$3.sym->name);
+            $$=$1;
+          }
+          
+          /*$$->setInitial($3->type.typ,$3->initial);*/
+
             /*switch($3.type){
               case T_INT:
                 [>printf("kkkkkkkkkkkkk%d",$1.ival);<]
@@ -358,15 +586,15 @@ direct_declarator:
 				   |direct_declarator '[' type_qualifier_list_opt assignment_expression_opt ']'
            {
               int result;
-              switch($4->type.typ){
+              switch($4.sym->type.typ){
                 case T_CHAR:
-                  result=(int)$4->initial.charval;
+                  result=(int)$4.sym->initial.charval;
                   break;
                 case T_DOUBLE:
-                  result=(int)$4->initial.doubleval;
+                  result=(int)$4.sym->initial.doubleval;
                   break;
                 default:
-                  result=$4->initial.intval;
+                  result=$4.sym->initial.intval;
                   break;
               }
               $$=currentSymbolTable->lookup($1->name);
@@ -375,9 +603,14 @@ direct_declarator:
 				   |direct_declarator '[' STATIC type_qualifier_list_opt assignment_expression ']'
 				   |direct_declarator '[' type_qualifier_list STATIC assignment_expression ']'
 				   |direct_declarator '[' type_qualifier_list_opt '*' ']'
-				   |direct_declarator '(' parameter_type_list ')'
+				   |direct_declarator '(' funcdecstart parameter_type_list funcdecend ')' { printf("iiii"); $1->makeFunction($3);}
 				   |direct_declarator '(' identifier_list_opt ')'
 				   ;
+
+funcdecstart:
+             {$$=currentSymbolTable=new Symboltable();};
+funcdecend: 
+          {currentSymbolTable = &globalSymbolTable;};
 pointer_opt: {$$=0;  }
 		   |pointer {  $$=$1;  }
 		   ;
@@ -420,7 +653,7 @@ type_name:
 		 specifier_qualifier_list
 		 ;
 initializer:
-		   assignment_expression
+		   assignment_expression {$$=$1;}
 		   |'{' initializer_list '}' {}
 		   |'{' initializer_list ',' '}' {}
 		   ;
@@ -455,46 +688,54 @@ statement:
 		 |jump_statement
 		 ;
 labeled_statement:
-				 IDENTIFIER ':' statement
-				 |CASE constant_expression ':' statement
-				 |DEFAULT ':' statement
+				 IDENTIFIER ':' statement {}
+				 |CASE constant_expression ':' statement {}
+				 |DEFAULT ':' statement {}
 				 ;
 compound_statement:
-				  '{' block_item_list_opt '}'
+				  '{' block_item_list_opt '}' {$$=$2;}
 				  ;
-block_item_list_opt:
+block_item_list_opt:{$$=new vector<int>();}
 				   |block_item_list
 				   ;
 
 
 block_item_list:
-			   block_item 
-			   |block_item_list block_item
+			   block_item {$$=$1;}
+			   |block_item_list M block_item { backpatch($1,$2); $$ = $3;}
 			   ;
 
 block_item:
-		  declaration
-		  |statement
+		  declaration {$$=new vector<int>();}
+		  |statement {$$=$1;}
 		  ;
 expression_statement:
-					expression_opt ';'
+					expression_opt ';' { $$=new vector<int>(); }
 					;
 selection_statement:
-				   IF '(' expression ')' M statement
+				   IF '(' expression ')' M statement { backpatch($3.truelist,$5); $$=merge($3.falselist,$6); }
 				   |IF '(' expression ')'  M statement N ELSE M statement
-				   |SWITCH '(' expression ')' statement
+           {
+              backpatch($3.truelist, $5);
+              backpatch($3.falselist, $9);
+              vector<int>* foo = merge($6,$7);
+              $$=merge(foo,$10);
+  
+            }
+				   |SWITCH '(' expression ')' statement {}
 				   ;
 iteration_statement:
-				   WHILE M '(' expression ')' M statement
-				   |DO M statement M WHILE '(' expression ')' ';'
+				   WHILE M '(' expression ')' M statement { backpatch($7,$2); backpatch($4.truelist,$6); $$=$4.falselist; quads.emit(Q_GOTO,$2); }
+				   |DO M statement M WHILE '(' expression ')' ';' {backpatch($7.truelist,$2); backpatch($3,$4); $$=$7.falselist;}
 				   |FOR '(' expression_opt ';'  M expression_opt ';' M expression_opt N ')' M statement 
-				   |FOR '(' declaration expression_opt ';' expression_opt ')' statement 
+   { backpatch($6.truelist,$12); backpatch($10,$5); backpatch($13,$8); quads.emit(Q_GOTO, $8); $$=$6.falselist;  }
+				   |FOR '(' declaration expression_opt ';' expression_opt ')' statement  {}
 				   ;
 jump_statement:
-			  GOTO IDENTIFIER ';'
-			  |CONTINUE ';'
-			  |BREAK ';'
-			  |RETURN expression_opt ';'
+			  GOTO IDENTIFIER ';' {}
+			  |CONTINUE ';' {}
+			  |BREAK ';' {}
+			  |RETURN expression_opt ';' {}
 			  ;
 
 
@@ -520,8 +761,8 @@ declaration_list:
 				declaration
 				|declaration_list declaration
 				;
-M:;
-N:;
+M: {$$=quads.size;};
+N: {$$=makelist(quads.size); quads.emit(Q_GOTO,-1);};
 		  
 
 %%

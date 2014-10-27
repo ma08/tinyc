@@ -1,5 +1,9 @@
-int main(){
-  int **b[20][40];
-  char c='a';
-  return 0;
+void main(){
+    int b;
+ while(b){
+   b++;
+
+ }
+ b--;
+
 }

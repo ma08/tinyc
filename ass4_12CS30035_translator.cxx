@@ -16,13 +16,70 @@ int offset=0;
 Symboltable globalSymbolTable;
 Symboltable* currentSymbolTable = &globalSymbolTable;
 QuadArr quads;
+int getsize(Type* type){
+    if(type->typ!=T_ARRAY)
+      return -1;
+    Type* t = type->next;
+    int x=1;
+    while(t!=NULL){
+      if(t->typ!=T_ARRAY){
+        switch(t->typ){
+          case T_INT:
+            x=x*size_int;
+            break;
+          case T_CHAR:
+            x=x*size_char;
+            break;
+          case T_DOUBLE:
+            x=x*size_double;
+            break;
+          case T_POINTER:
+            x=x*size_pointer;
+            break;
+          default:
+            break;
+        }
+        return x;
+      }
+      x=x*t->length;
+      t=t->next;
+    }
+    return x;
+  };
+bool typec(struct Type* t1, struct Type* t2){
+  if(t1==NULL&&t2==NULL)
+    return true;
+  if(t1==NULL&&t2!=NULL)
+    return false;
+  if(t1!=NULL&&t2==NULL)
+    return false;
+  if(t1->typ==t2->typ){
+    return typec(t1->next,t2->next);
+  }
+  return false;
+};
 
+bool typecheck(struct symrow* e1, struct symrow* e2){
+  if(e1->type.typ==e2->type.typ){
+    if(e1->type.typ==T_POINTER){
+      return typec(e1->type.next,e2->type.next);
+    }
+    return true;
+  }
+  return false;
+};
 
 void Symboltable::print(){
   int i;
   for (i = 0; i < this->size; ++i)
   {
     this->arr[i].print();
+    if(this->arr[i].type.typ==T_FUNCTION){
+
+      printf("\n-----------------TABLE AT %s---------\n",this->arr[i].name);
+      this->arr[i].nested_table->print();
+      printf("\n--------------------------\n");
+    }
   }
 
 };
@@ -75,6 +132,14 @@ void symrow::makeArray(int length){
    default:
     break;
   }
+};
+
+void symrow::makeFunction(Symboltable* symTab){
+  this->type.next=new Type(this->type);
+  this->type.typ=T_FUNCTION;
+  this->nested_table=symTab;
+  this->size=0;
+  return;
 };
 
 /*void Symboltable::makeArray(struct symrow* row,int length){
@@ -190,6 +255,81 @@ void symrow::makePointer(int p){
   }
 };*/
 
+void Quad::print(){
+  switch(this->op){
+    case Q_COPY:
+      printf("%s = %s",this->res,this->arg1);
+      break;
+    case Q_PLUS:
+      printf("%s = %s + %s",this->res,this->arg1,this->arg2);
+      break;
+    case Q_MINUS:
+      printf("%s = %s - %s",this->res,this->arg1,this->arg2);
+      break;
+    case Q_MULT:
+      printf("%s = %s * %s",this->res,this->arg1,this->arg2);
+      break;
+    case Q_MODULO:
+      printf("%s = %s %% %s",this->res,this->arg1,this->arg2);
+      break;
+    case Q_DIVISION:
+      printf("%s = %s / %s",this->res,this->arg1,this->arg2);
+      break;
+    case Q_AMPERSAND:
+      printf("%s = %s & %s",this->res,this->arg1,this->arg2);
+      break;
+    case Q_AROR:
+      printf("%s = %s | %s",this->res,this->arg1,this->arg2);
+      break;
+    case Q_XOR:
+      printf("%s = %s ^ %s",this->res,this->arg1,this->arg2);
+      break;
+    case Q_LSH:
+      printf("%s = %s << %s",this->res,this->arg1,this->arg2);
+      break;
+    case Q_RSH:
+      printf("%s = %s >> %s",this->res,this->arg1,this->arg2);
+      break;
+    case Q_REL_IFLT:
+      printf("if(%s < %s) goto %s",this->arg1,this->arg2,this->res);
+      break;
+    case Q_REL_IFEQ:
+      printf("if(%s == %s) goto %s",this->arg1,this->arg2,this->res);
+      break;
+    case Q_REL_IFNEQ:
+      printf("if(%s != %s) goto %s",this->arg1,this->arg2,this->res);
+      break;
+    case Q_REL_IFGT:
+      printf("if(%s > %s) goto %s",this->arg1,this->arg2,this->res);
+      break;
+    case Q_REL_IFGTE:
+      printf("if(%s >= %s) goto %s",this->arg1,this->arg2,this->res);
+      break;
+    case Q_REL_IFLTE:
+      printf("if(%s <= %s) goto %s",this->arg1,this->arg2,this->res);
+      break;
+    case Q_GOTO:
+      printf("goto %s",this->res);
+      break;
+    case Q_ARRACC:
+      printf("%s = %s[%s]",this->res,this->arg1,this->arg2);
+      break;
+    default:
+      break;
+  }
+};
+
+void QuadArr::print(){
+  int i;
+  printf("\n");
+  for (i = 0; i < this->size; ++i)
+  {
+    printf("\n%d: ",i);
+    this->arr[i].print();
+  }
+    printf("\n");
+}
+
 struct symrow* Symboltable::lookup(const char* s){
   int i=0;
   for (i = 0; i < this->size; ++i)
@@ -269,6 +409,23 @@ void QuadArr::emit(int op,char *r,char *a1,char *a2){
   this->size++;
 };
 
+void QuadArr::emit(int op,int r,char *a1,char *a2){
+  /*if(a2==0)
+    this->arr[this->size].arg2[0]='\0';
+  else
+    strcpy(this->arr[this->size].arg2,a2);*/
+
+  strcpy(this->arr[this->size].arg2,a2);
+  (this->arr[this->size].op)=(Opcode)op;
+  if(r!=-1)
+    sprintf(this->arr[this->size].res,"%d",r);
+  else
+    sprintf(this->arr[this->size].res,"...");
+  strcpy(this->arr[this->size].arg1,a1);
+  this->size++;
+};
+
+
 void QuadArr::emit(int op,char *r,int num){
   this->arr[this->size].op=(Opcode)op;
   strcpy(this->arr[this->size].res,r);
@@ -276,13 +433,19 @@ void QuadArr::emit(int op,char *r,int num){
   this->arr[this->size].arg2[0]='\0';
   this->size++;
 };
+
 void QuadArr::emit(int op,int num){
   this->arr[this->size].op=(Opcode)op;
-  sprintf(this->arr[this->size].res,"%d",num);
+  if(num!=-1)
+    sprintf(this->arr[this->size].res,"%d",num);
+  else
+    sprintf(this->arr[this->size].res,"...");
+
   this->arr[this->size].arg1[0]='\0';
   this->arr[this->size].arg2[0]='\0';
   this->size++;
 };
+
 void QuadArr::emit(char *r, char* a){
   this->arr[this->size].op=Q_COPY;
   strcpy(this->arr[this->size].res,r);
@@ -290,7 +453,13 @@ void QuadArr::emit(char *r, char* a){
   this->arr[this->size].arg2[0]='\0';
   this->size++;
 };
-
+void QuadArr::emit(char *r, int num){
+  this->arr[this->size].op=Q_COPY;
+  strcpy(this->arr[this->size].res,r);
+  sprintf(this->arr[this->size].arg1,"%d",num);
+  this->arr[this->size].arg2[0]='\0';
+  this->size++;
+};
 
 vector<int>* makelist(int i){
   vector<int>* list=new vector<int>();
@@ -298,17 +467,17 @@ vector<int>* makelist(int i){
   return list;
 };
 
-vector<int>* merge(const vector<int>& p1,const vector<int>& p2){
-  vector<int>* final=new vector<int>(p1);
+vector<int>* merge(const vector<int>* p1,const vector<int>* p2){
+  vector<int>* final=new vector<int>(*p1);
   int i;
-  for (i = 0; i < p2.size(); ++i) 
-    final->push_back(p2[i]);
+  for (i = 0; i < p2->size(); ++i) 
+    final->push_back((*p2)[i]);
 
   return final;
 }
 
-void backpatch(const vector<int>& p, int label){
+void backpatch(const vector<int>* p, int label){
   int i;
-  for (i = 0; i < p.size(); ++i) 
-    sprintf( quads.arr[i].res,"%d",label);
+  for (i = 0; i < p->size(); ++i) 
+    sprintf( quads.arr[(*p)[i]].res,"%d",label);
 };
