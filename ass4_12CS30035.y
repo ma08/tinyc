@@ -215,13 +215,26 @@ unary_expression:
             quads.emit(Q_MINUS,$2->name,$2->name,"1");
             quads.emit($$->name,$2->name);
          }
-				|unary_operator cast_expression {}
+        |unary_operator cast_expression {}
 				|SIZEOF unary_expression {}
 				|SIZEOF '(' type_name ')' {}
+        |'&' cast_expression  
+        {
+              /*$$=currentSymbolTable->gentemp(Type($2->type.next->typ));*/
+              /*quads.emit(Q_DEREF,"c",$2->name);*/
+          /*if($2->type.typ==T_POINTER){
+            if($2->type.next->typ!=T_POINTER||$2->type.next->typ!=T_ARRAY){
+              $$=currentSymbolTable->gentemp(Type(*$2->type.next));
+              quads.emit(Q_DEREF,$$->name,$2->name);
+            }else{
+              $$=currentSymbolTable->gentemp(Type($2->type.next->typ));
+            }
+          }*/
+
+        }
 				;
 unary_operator:
-			  '&'
-			  |'*'
+			  '*'
 			  |'+'
 			  |'-'
 			  |'~'
@@ -235,81 +248,85 @@ multiplicative_expression:
 						cast_expression {$$=$1;}
 						|multiplicative_expression '*' cast_expression 
             {
-              if(typecheck($1,$3)){
-                $$=currentSymbolTable->gentemp(Type($1->type.typ));
-                quads.emit(Q_MULT,$$->name,$1->name,$3->name);
-              }
+              struct symrow *t1;
+              struct symrow *t2;
+              typecheck($1,$3,&t1,&t2);
+                $$=currentSymbolTable->gentemp(Type(t1->type.typ));
+                quads.emit(Q_MULT,$$->name,t1->name,t2->name);
  
             }
 						|multiplicative_expression '/' cast_expression
             {
-              if(typecheck($1,$3)){
-                $$=currentSymbolTable->gentemp(Type($1->type.typ));
-                quads.emit(Q_DIVISION,$$->name,$1->name,$3->name);
-              }
+              struct symrow *t1;
+              struct symrow *t2;
+              typecheck($1,$3,&t1,&t2);
+                $$=currentSymbolTable->gentemp(Type(t1->type.typ));
+                quads.emit(Q_DIVISION,$$->name,t1->name,t2->name);
  
             }
 						|multiplicative_expression '%' cast_expression
             {
-              if(typecheck($1,$3)){
-                $$=currentSymbolTable->gentemp(Type($1->type.typ));
+               $$=currentSymbolTable->gentemp(Type($1->type.typ));
                 quads.emit(Q_MODULO,$$->name,$1->name,$3->name);
-              }
- 
+                
             }
 						;
 additive_expression:
 				   multiplicative_expression {$$=$1;}
 				   |additive_expression '+' multiplicative_expression
-            {
-              if(typecheck($1,$3)){
-                $$=currentSymbolTable->gentemp(Type($1->type.typ));
-                quads.emit(Q_PLUS,$$->name,$1->name,$3->name);
-              }
+            { 
+              struct symrow *t1;
+              struct symrow *t2;
+              typecheck($1,$3,&t1,&t2);
+                $$=currentSymbolTable->gentemp(Type(t1->type.typ));
+                quads.emit(Q_PLUS,$$->name,t1->name,t2->name);
  
             }
 				   |additive_expression '-' multiplicative_expression
-            {
-              if(typecheck($1,$3)){
-                $$=currentSymbolTable->gentemp(Type($1->type.typ));
-                quads.emit(Q_MINUS,$$->name,$1->name,$3->name);
-              }
+            { struct symrow *t1;
+              struct symrow *t2;
+              typecheck($1,$3,&t1,&t2);
+                $$=currentSymbolTable->gentemp(Type(t1->type.typ));
+                quads.emit(Q_MINUS,$$->name,t1->name,t2->name);
  
             }
 				   ;
 shift_expression:
 				additive_expression {$$=$1;}
 				|shift_expression LSH additive_expression
-          {
-              if(typecheck($1,$3)){
-                $$=currentSymbolTable->gentemp(Type());
-                quads.emit(Q_LSH,$$->name,$1->name,$3->name);
-              }
-            }
+          { 
+              struct symrow* t = xtoInt($3);
+                $$=currentSymbolTable->gentemp($1->type.typ);
+                quads.emit(Q_LSH,$$->name,$1->name,t->name);
+          }
 				|shift_expression RSH additive_expression
           {
-              if(typecheck($1,$3)){
-                $$=currentSymbolTable->gentemp(Type());
-                quads.emit(Q_RSH,$$->name,$1->name,$3->name);
-              }
+                struct symrow* t = xtoInt($3);
+                $$=currentSymbolTable->gentemp($1->type.typ);
+                quads.emit(Q_RSH,$$->name,$1->name,t->name);
+
             }
 				;
 relational_expression:
 					 shift_expression {$$.sym=$1; $$.truelist=new vector<int>; $$.falselist=new vector<int>; $$.isBexp=false;}
 					 |relational_expression '<' shift_expression
-          {
-              if(typecheck($1.sym,$3)){
+          { 
+           
+          
+              /*if(typecheck($1.sym,$3)){*/
                 $$.sym=currentSymbolTable->gentemp(Type());
                 $$.truelist=makelist(quads.size);
                 $$.falselist=makelist(quads.size+1);
                 quads.emit(Q_REL_IFLT,-1,$1.sym->name,$3->name);
                 quads.emit(Q_GOTO,-1);
                 $$.isBexp=true;
-              }
+              /*}*/
           }
 					 |relational_expression '>' shift_expression
-          {
-              if(typecheck($1.sym,$3)){
+          { 
+           
+          
+              /*if(typecheck($1.sym,$3)){*/
                 $$.sym=currentSymbolTable->gentemp(Type());
                 $$.truelist=makelist(quads.size);
                 $$.falselist=makelist(quads.size+1);
@@ -318,23 +335,22 @@ relational_expression:
                 quads.emit(Q_GOTO,-1);
                 $$.isBexp=true;
                 
-              }
+              /*}*/
           }
 					 |relational_expression RANGB_EQ shift_expression
-           {
-              if(typecheck($1.sym,$3)){
+           { 
+              /*if(typecheck($1.sym,$3)){*/
                 $$.sym=currentSymbolTable->gentemp(Type());
                 $$.truelist=makelist(quads.size);
                 $$.falselist=makelist(quads.size+1);
-
                 quads.emit(Q_REL_IFGTE,-1,$1.sym->name,$3->name);
                 quads.emit(Q_GOTO,-1);
                 $$.isBexp=true;
-              }
+              /*}*/
             }
 					 |relational_expression LANGB_EQ shift_expression
-           {
-              if(typecheck($1.sym,$3)){
+           { 
+              /*if(typecheck($1.sym,$3)){*/
                 $$.sym=currentSymbolTable->gentemp(Type());
                 $$.truelist=makelist(quads.size);
                 $$.falselist=makelist(quads.size+1);
@@ -342,62 +358,62 @@ relational_expression:
                 quads.emit(Q_REL_IFLTE,-1,$1.sym->name,$3->name);
                 quads.emit(Q_GOTO,-1);
                 $$.isBexp=true;
-              }
+              /*}*/
             }
 					 ;
 equality_expression:
 				   relational_expression {$$=$1;}
 				   |equality_expression DOUBLE_EQ relational_expression
-           {
-              if(typecheck($1.sym,$3.sym)){
+           { 
+              /*if(typecheck($1.sym,$3.sym)){*/
                 $$.sym=currentSymbolTable->gentemp(Type());
                 $$.truelist=makelist(quads.size);
                 $$.falselist=makelist(quads.size+1);
                 quads.emit(Q_REL_IFEQ,-1,$1.sym->name,$3.sym->name);
                 quads.emit(Q_GOTO,-1);
                 $$.isBexp=true;
-              }
+              /*}*/
             }
 				   |relational_expression EXCL_EQ relational_expression
-           {
-              if(typecheck($1.sym,$3.sym)){
+           { 
+              /*if(typecheck($1.sym,$3.sym)){*/
                 $$.sym=currentSymbolTable->gentemp(Type());
                 $$.truelist=makelist(quads.size);
                 $$.falselist=makelist(quads.size+1);
                 quads.emit(Q_REL_IFNEQ,-1,$1.sym->name,$3.sym->name);
                 quads.emit(Q_GOTO,-1);
                 $$.isBexp=true;
-              }
+              /*}*/
             }
 				   ;
 AND_expression:
 			  equality_expression {$$=$1;}
 			  |AND_expression '&' equality_expression
-          {
-              if(typecheck($1.sym,$3.sym)){
+          { 
+              /*if(typecheck($1.sym,$3.sym)){*/
                 $$.sym=currentSymbolTable->gentemp(Type());
                 quads.emit(Q_AMPERSAND,$$.sym->name,$1.sym->name,$3.sym->name);
-              }
+              /*}*/
             }
 			  ;
 exclusive_OR_expression:
 					   AND_expression {$$=$1;}
 					   |exclusive_OR_expression '^'  AND_expression
-            {
-              if(typecheck($1.sym,$3.sym)){
+            { 
+              /*if(typecheck($1.sym,$3.sym)){*/
                 $$.sym=currentSymbolTable->gentemp(Type());
                 quads.emit(Q_XOR,$$.sym->name,$1.sym->name,$3.sym->name);
-              }
+              /*}*/
             }
 					   ;
 inclusive_OR_expression:
 					   exclusive_OR_expression {$$=$1;}
 					   |inclusive_OR_expression '|' exclusive_OR_expression
-            {
-              if(typecheck($1.sym,$3.sym)){
+            { 
+              /*if(typecheck($1.sym,$3.sym)){*/
                 $$.sym=currentSymbolTable->gentemp(Type());
                 quads.emit(Q_AROR,$$.sym->name,$1.sym->name,$3.sym->name);
-              }
+              /*}*/
             }
 					   ;
 logical_AND_expression:
@@ -445,19 +461,27 @@ assignment_expression_opt: {}
 assignment_expression:
 					 conditional_expression {$$=$1;}
 					 |unary_expression assignment_operator assignment_expression
-            {
-              if(typecheck($1,$3.sym)){
-                if($3.isBexp){
+            { $$.sym=$1;
+              if($3.isBexp){
                   backpatch($3.truelist,quads.size);
                   backpatch($3.falselist,quads.size+1);
                   quads.emit($1->name,TRUE_VAL); 
                   quads.emit($1->name,FALSE_VAL); 
-                }
-                else
-                  quads.emit($1->name,$3.sym->name);
-              
-                }
+              }else{
+
+              struct symrow *t =$3.sym;
+              if($1->type.typ==T_INT){
+                t=xtoInt($3.sym);
+              }
+              if($1->type.typ==T_CHAR){
+                t=xtoChar($3.sym);
+              }
+              if($1->type.typ==T_DOUBLE){
+                t=xtoDouble($3.sym);
+              }
+              quads.emit($1->name,t->name);
             }
+          }
            |array_expression assignment_operator assignment_expression 
            {
               if($3.isBexp){
@@ -524,8 +548,26 @@ init_declarator:
          |declarator '=' initializer {
           $$=$1;
           /*printf("xxxxxxxxx%dxxxxxxxxxx%lf",$3->type.typ,$3->initial.doubleval);*/
+              if($3.isBexp){
+                  backpatch($3.truelist,quads.size);
+                  backpatch($3.falselist,quads.size+1);
+                  quads.emit($1->name,TRUE_VAL); 
+                  quads.emit($1->name,FALSE_VAL); 
+              }else{
 
-          if(typecheck($1,$3.sym)){
+              struct symrow *t =$3.sym;
+              if($1->type.typ==T_INT){
+                t=xtoInt($3.sym);
+              }
+              if($1->type.typ==T_CHAR){
+                t=xtoChar($3.sym);
+              }
+              if($1->type.typ==T_DOUBLE){
+                t=xtoDouble($3.sym);
+              }
+              quads.emit($1->name,t->name);
+            }
+          /*if(typecheck($1,$3.sym)){
             if($3.isBexp){
                   backpatch($3.truelist,quads.size);
                   backpatch($3.falselist,quads.size+1);
@@ -533,9 +575,8 @@ init_declarator:
                   quads.emit($1->name,FALSE_VAL); 
                 }
             else
-              quads.emit($1->name,$3.sym->name);
+              quads.emit($1->name,$3.sym->name);*/
             $$=$1;
-          }
           
           /*$$->setInitial($3->type.typ,$3->initial);*/
 
@@ -787,9 +828,9 @@ function_definition:
 					 declaration_specifiers declarator  declaration_list_opt temp1 compound_statement M temp2 {/*backpatch($5,$6);*/}
 				   ;
 
-temp1:{printf("qqqqqqq");currentSymbolTable=lastSymbolTable; quads.emit(Q_FUNCSTART,lastFunction);};
+temp1:{currentSymbolTable=lastSymbolTable; quads.emit(Q_FUNCSTART,lastFunction);};
 
-temp2:{printf("iiiiii");currentSymbolTable=&globalSymbolTable; quads.emit(Q_FUNCEND,lastFunction);};
+temp2:{currentSymbolTable=&globalSymbolTable; quads.emit(Q_FUNCEND,lastFunction);};
 
 declaration_list_opt:
 					|declaration_list

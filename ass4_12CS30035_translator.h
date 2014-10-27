@@ -20,7 +20,7 @@ enum Opcode{
   Q_PLUS=1, Q_MINUS, Q_DIVISION, Q_MODULO, Q_MULT, Q_UNARYMINUS, Q_COPY, Q_ARR, Q_IF, Q_IFFALSE, Q_REL_IFEQ, Q_REL_IFLT,
 	Q_REL_IFGT, Q_REL_IFLTE, Q_REL_IFGTE, Q_REL_IFNEQ, Q_ARRVAL, Q_ARRDEREF, Q_GOTO, Q_REL_LT , Q_REL_GT, Q_REL_GTE, Q_REL_LTE,
   Q_REL_EQ, Q_REL_NEQ, Q_AMPERSAND, Q_XOR, Q_AROR, Q_LSH,Q_RSH,Q_ARRACC,Q_FUNCSTART,Q_FUNCEND,Q_FUNCALL,Q_PARAM,Q_INT2DOUBLE,Q_CHAR2DOUBLE,Q_DOUBLE2INT,Q_CHAR2INT,
-  Q_INT2CHAR,Q_ARR_COPY
+  Q_INT2CHAR, Q_DOUBLE2CHAR,Q_ARR_COPY,Q_DEREF
 
 
 };
@@ -131,27 +131,27 @@ struct symrow{
   };
 
   void print(){
-    printf("\n%-7s**",name);
+    printf("\n%-7s | ",name);
     printType(&type);
     switch(type.typ){
       case T_INT:
-        printf("***%d",initial.intval);
+        printf("| %d",initial.intval);
         break;
       case T_DOUBLE:
-        printf("***%lf",initial.doubleval);
+        printf("| %lf",initial.doubleval);
         break;
       case T_CHAR:
-        printf("***%c",initial.charval);
+        printf("| %c",initial.charval);
         break;
       default:
-        printf("***NULL");
+        printf("| NULL");
         break;
     }
-    printf("**%d***%d",size,offset);
+    printf("| %d | %d",size,offset);
     if(type.typ==T_FUNCTION){
-      printf("***%p",nested_table);
+      printf("| %p",nested_table);
     }else{
-      printf("***NULL");
+      printf("| NULL");
     }
   };
 };
@@ -220,7 +220,7 @@ extern int offset;
 
 void backpatch(const vector<int>* p, int label);
 
-bool typecheck(struct symrow* e1 , struct symrow* e2);
+void typecheck(struct symrow* e1 , struct symrow* e2,struct symrow **t1, struct symrow **t2);
 
 vector<int>* makelist(int i);
 vector<int>* merge(const vector<int>* p1,const vector<int>* p2);

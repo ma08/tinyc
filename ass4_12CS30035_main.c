@@ -6,6 +6,7 @@
 extern char* yytext;
 int main() { 
 	yyparse();
+  printf("\n-------------GLOBAL SYMBOL TABLE--------------\n");
   currentSymbolTable->print();
   quads.print();
 	return 0;

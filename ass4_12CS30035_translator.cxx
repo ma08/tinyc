@@ -60,14 +60,58 @@ bool typec(struct Type* t1, struct Type* t2){
   return false;
 };
 
-bool typecheck(struct symrow* e1, struct symrow* e2){
-  if(e1->type.typ==e2->type.typ){
-    if(e1->type.typ==T_POINTER){
-      return typec(e1->type.next,e2->type.next);
+void typecheck(struct symrow* e1, struct symrow* e2,struct symrow **t1, struct symrow **t2){
+  if(e1->type.typ==T_INT){
+    if(e2->type.typ==T_DOUBLE){
+      *t1=xtoDouble(e1);
+      *t2=e2;
+      return;
     }
-    return true;
+    if(e2->type.typ==T_CHAR){
+      *t1=e1;
+      *t2=xtoInt(e2);
+      return;
+    }
+    if(e2->type.typ==T_INT){
+      *t1=e1;
+      *t2=e2;
+      return;
+    }
   }
-  return false;
+  if(e1->type.typ==T_DOUBLE){
+    if(e2->type.typ==T_DOUBLE){
+      *t1=e1;
+      *t2=e2;
+      return;
+    }
+    if(e2->type.typ==T_CHAR){
+      *t1=e1;
+      *t2=xtoDouble(e2);
+      return;
+    }
+    if(e2->type.typ==T_INT){
+      *t1=e1;
+      *t2=xtoDouble(e2);
+      return;
+    }
+  }
+  if(e1->type.typ==T_CHAR){
+    if(e2->type.typ==T_DOUBLE){
+      *t1=xtoDouble(e1);
+      *t2=e2;
+      return;
+    }
+    if(e2->type.typ==T_CHAR){
+      *t1=e1;
+      *t2=e2;
+      return;
+    }
+    if(e2->type.typ==T_INT){
+      *t1=xtoInt(e1);
+      *t2=e2;
+      return;
+    }
+  }
 };
 
 void Symboltable::print(){
@@ -75,6 +119,10 @@ void Symboltable::print(){
   for (i = 0; i < this->size; ++i)
   {
     this->arr[i].print();
+    
+  }
+    for (i = 0; i < this->size; ++i)
+  {
     if(this->arr[i].type.typ==T_FUNCTION){
 
       printf("\n-----------------TABLE AT %s---------\n",this->arr[i].name);
@@ -82,7 +130,6 @@ void Symboltable::print(){
       printf("\n--------------------------\n");
     }
   }
-
 };
 void symrow::makeArray(int length){
   //this->printType(&this->type);
@@ -332,11 +379,10 @@ void Quad::print(){
       printf("%s = %s[%s]",this->res,this->arg1,this->arg2);
       break;
     case Q_FUNCSTART:
-      printf("\n");
       printf("%s start ",this->res);
       break;
     case Q_FUNCEND:
-      printf("End %s : ",this->res);
+      printf("End %s  ",this->res);
       printf("\n");
       break;
     case Q_FUNCALL:
@@ -349,19 +395,25 @@ void Quad::print(){
       printf("%s[%s] = %s",this->res,this->arg1,this->arg2);
       break;
     case Q_INT2CHAR:
-      printf("%s = %s",this->res,this->arg1);
+      printf("%s = int2Char(%s)",this->res,this->arg1);
       break;
     case Q_INT2DOUBLE:
-      printf("%s = %s",this->res,this->arg1);
+      printf("%s = int2Double(%s)",this->res,this->arg1);
       break;
     case Q_CHAR2DOUBLE:
-      printf("%s = %s",this->res,this->arg1);
+      printf("%s = char2Double(%s)",this->res,this->arg1);
       break;
     case Q_CHAR2INT:
-      printf("%s = %s",this->res,this->arg1);
+      printf("%s = char2Int(%s)",this->res,this->arg1);
       break;
     case Q_DOUBLE2INT:
-      printf("%s = %s",this->res,this->arg1);
+      printf("%s =double2Int(%s)",this->res,this->arg1);
+      break;
+    case Q_DOUBLE2CHAR:
+      printf("%s =double2Char(%s)",this->res,this->arg1);
+      break;
+    case Q_DEREF:
+      printf("%s =&%s",this->res,this->arg1);
       break;
     default:
       break;
@@ -403,7 +455,11 @@ struct symrow* Symboltable::lookup(const char* s){
   }
   else*/
   this->arr[this->size].type.typ=lastType;
-
+  if(this->size!=0)
+    this->arr[this->size].offset=this->arr[this->size-1].offset+this->arr[this->size-1].size;
+  else{
+    this->arr[this->size].offset=0;
+  }
   switch(lastType){
     case T_VOID:
       this->arr[this->size].size=0;
@@ -431,6 +487,11 @@ struct symrow* Symboltable::gentemp(struct Type type){
   this->arr[this->size].name[0]='t';
   sprintf(&this->arr[this->size].name[1],"%d",this->tempcount++);
   this->arr[this->size].type=type;
+  if(this->size!=0)
+    this->arr[this->size].offset=this->arr[this->size-1].offset+this->arr[this->size-1].size;
+  else{
+    this->arr[this->size].offset=0;
+  }
   switch(type.typ){
     case T_VOID:
       this->arr[this->size].size=0;
@@ -582,6 +643,7 @@ struct symrow* xtoInt(struct symrow* s){
     return s;
   }
   if(s->type.typ==T_DOUBLE){
+    
     t=currentSymbolTable->gentemp(T_INT);
     quads.emit(Q_DOUBLE2INT,t->name,s->name);
     return t;
