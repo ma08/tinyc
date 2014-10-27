@@ -2,6 +2,7 @@
 *
 
 !.gitignore
+!Makefile
 !ass4_12CS30035.l
 !ass4_12CS30035.y
 !ass4_12CS30035_translator.h
