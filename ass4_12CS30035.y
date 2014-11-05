@@ -192,7 +192,18 @@ postfix_expression:
 				  ;
 
 array_expression:
-            IDENTIFIER '[' expression ']'  {$$.sym=currentSymbolTable->gentemp(); $$.id_sym=currentSymbolTable->lookup($1); $$.type=&($$.id_sym->type); $$.sym->initial.intval=getsize($$.type); char c[30]; quads.emit(Q_MULT,$$.sym->name,$$.sym->name,$3.sym->name);  $$.type=$$.type->next;}
+            IDENTIFIER '[' expression ']'  {$$.sym=currentSymbolTable->gentemp();
+if(currentSymbolTable->exists($1)){
+        $$.id_sym=currentSymbolTable->lookup($1);
+    }else{
+        if(globalSymbolTable.exists($1)){
+            $$.id_sym=globalSymbolTable.lookup($1);
+        }else{
+            $$.id_sym=currentSymbolTable->lookup($1);
+        }
+    }
+
+ $$.type=&($$.id_sym->type); $$.sym->initial.intval=getsize($$.type); char c[30]; quads.emit(Q_MULT,$$.sym->name,$$.sym->name,$3.sym->name);  $$.type=$$.type->next;}
 
            |array_expression '[' expression ']' {$$.sym=currentSymbolTable->gentemp();  $$.sym->initial.intval=getsize($$.type); char c[30]; quads.emit(Q_MULT,$$.sym->name,$$.sym->name,$3.sym->name);  $$.type=$$.type->next; quads.emit(Q_PLUS,$$.sym->name,$$.sym->name,$1.sym->name); $$.id_sym=$1.id_sym;}
 
@@ -801,7 +812,15 @@ selection_statement:
 				   |SWITCH '(' expression ')' statement {}
 				   ;
 iteration_statement:
-				   WHILE M '(' expression ')' M statement { backpatch($7,$2); backpatch($4.truelist,$6); $$=$4.falselist; quads.emit(Q_GOTO,$2); }
+				   WHILE M '(' expression ')' M statement {
+/*
+if(!$4.isBexp) {
+  xtobool(&$4);
+
+
+}*/
+
+backpatch($7,$2); backpatch($4.truelist,$6); $$=$4.falselist; quads.emit(Q_GOTO,$2); }
 				   |DO M statement M WHILE '(' expression ')' ';' {backpatch($7.truelist,$2); backpatch($3,$4); $$=$7.falselist;}
 				   |FOR '(' expression_opt ';'  M expression_opt ';' M expression_opt N ')' M statement 
    { backpatch($6.truelist,$12); backpatch($10,$5); backpatch($13,$8); quads.emit(Q_GOTO, $8); $$=$6.falselist;  }

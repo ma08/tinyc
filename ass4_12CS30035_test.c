@@ -1,8 +1,10 @@
 int foo(){
-  int i,j;
-  for(i=0;i<5;i++){
-    for(j=0;j<5;j++){
-      a[i][j]=0;
-    }
+  int a,b;
+  while(a&&b)
+  {
+    a=1;
+
   }
+  return;
+  
 }
