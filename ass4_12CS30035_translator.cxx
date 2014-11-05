@@ -131,7 +131,7 @@ void Symboltable::print(){
     }
   }
 };
-void symrow::makeArray(int length){
+void symrow::makeArray(int length,Symboltable* currentSymbolTable){
   //this->printType(&this->type);
   //printf("\n---\n");
   //this->printType(&this->type);
@@ -179,6 +179,11 @@ void symrow::makeArray(int length){
     this->size=length*this->size;
    default:
     break;
+  }
+  int k;
+  for (k = 1; k < currentSymbolTable->size ; ++k)
+  {
+    currentSymbolTable->arr[k].offset = currentSymbolTable->arr[k-1].size+currentSymbolTable->arr[k-1].offset;
   }
 };
 

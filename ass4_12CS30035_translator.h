@@ -81,7 +81,7 @@ struct symrow{
     }
   }
   void makePointer(int p);
-  void makeArray(int length);
+  void makeArray(int length,Symboltable* currentSymbolTable);
   void makeFunction(Symboltable* symTab);
 
   static void printType(const struct Type *t){
@@ -166,13 +166,13 @@ class Symboltable{
     void update(char* name,struct Type type,int size,int offset,union Init initial);
     void print();
     bool exists(const char * s);
+    struct symrow arr[MAX];
+    int tempcount ;
+    int size;
     
   private:
-    struct symrow arr[MAX];
     //int size = 0;
-    int size;
     //int tempcount = 0;
-    int tempcount ;
 };
 
 class Quad{

@@ -112,7 +112,7 @@ void yyerror(char *s);
 %type <intValue> M
 
 %type <boool> logical_AND_expression logical_OR_expression inclusive_OR_expression relational_expression equality_expression expression_opt
-%type <boool> AND_expression exclusive_OR_expression  conditional_expression expression assignment_expression assignment_expression_opt initializer
+%type <boool> AND_expression exclusive_OR_expression  conditional_expression expression booexpression assignment_expression assignment_expression_opt initializer
 
 
 %type <nextlist> statement labeled_statement compound_statement jump_statement iteration_statement expression_statement selection_statement 
@@ -522,6 +522,8 @@ expression_opt:{}
 			  |expression {$$=$1;}
 			  ;
 
+booexpression: expression {xtobool(&$1); $$=$1;}
+
 expression:
 		  assignment_expression {$$=$1;}
 		  |expression ',' assignment_expression
@@ -679,7 +681,7 @@ direct_declarator:
                   break;
               }
               $$=currentSymbolTable->lookup($1->name);
-              $1->makeArray(result);
+              $1->makeArray(result,currentSymbolTable);
             }
 				   |direct_declarator '[' STATIC type_qualifier_list_opt assignment_expression ']'
 				   |direct_declarator '[' type_qualifier_list STATIC assignment_expression ']'
@@ -812,13 +814,13 @@ selection_statement:
 				   |SWITCH '(' expression ')' statement {}
 				   ;
 iteration_statement:
-				   WHILE M '(' expression ')' M statement {
-/*
+				   WHILE M '(' booexpression ')' M statement {
+
 if(!$4.isBexp) {
   xtobool(&$4);
 
 
-}*/
+}
 
 backpatch($7,$2); backpatch($4.truelist,$6); $$=$4.falselist; quads.emit(Q_GOTO,$2); }
 				   |DO M statement M WHILE '(' expression ')' ';' {backpatch($7.truelist,$2); backpatch($3,$4); $$=$7.falselist;}
