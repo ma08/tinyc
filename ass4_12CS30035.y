@@ -97,6 +97,9 @@ void yyerror(char *s);
 
 %type <array_exp> array_expression
 
+%nonassoc THEN 
+%nonassoc ELSE
+
 
 %start translation_unit
 /*%type <symRow> assignment_expression*/
@@ -807,7 +810,7 @@ expression_statement:
 					expression_opt ';' { $$=new vector<int>(); }
 					;
 selection_statement:
-				   IF '(' booexpression ')' M statement { backpatch($3.truelist,$5); $$=merge($3.falselist,$6); }
+				   IF '(' booexpression ')' M statement K %prec THEN { backpatch($3.truelist,$5); $$=merge($3.falselist,$6); }
 				   |IF '(' booexpression ')'  M statement N ELSE M statement
            {
               backpatch($3.truelist, $5);
@@ -864,6 +867,7 @@ declaration_list:
 				;
 M: {$$=quads.size;};
 N: {$$=makelist(quads.size); quads.emit(Q_GOTO,-1);};
+K:;
 		  
 
 %%
