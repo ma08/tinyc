@@ -98,7 +98,7 @@ void yyerror(char *s);
 %type <array_exp> array_expression
 
 %nonassoc THEN 
-%nonassoc K
+%nonassoc ELSE
 
 
 %start translation_unit
@@ -439,7 +439,7 @@ logical_AND_expression:
                 xtobool(&$1);
                 backpatch($1.truelist,$5+2);
               }else{
-                backpatch($1.truelist,$5);
+                backpatch($1.truelist,$3);
               }
               xtobool(&$4);
               $$.truelist=$4.truelist;
@@ -811,13 +811,13 @@ expression_statement:
 					expression_opt ';' { $$=new vector<int>(); }
 					;
 selection_statement:
-				   IF '(' booexpression ')' M statement   %prec THEN { backpatch($3.truelist,$5); $$=merge($3.falselist,$6);}
-				   |IF '(' booexpression ')'  M statement K N ELSE M statement
+				   IF '(' booexpression ')' M statement   N  %prec THEN { backpatch($3.truelist,$5); $$=merge($3.falselist,$6); quads.size--;}
+				   |IF '(' booexpression ')'  M statement N ELSE M statement
            {
               backpatch($3.truelist, $5);
-              backpatch($3.falselist, $10);
-              vector<int>* foo = merge($6,$8);
-              $$=merge(foo,$11);
+              backpatch($3.falselist, $9);
+              vector<int>* foo = merge($6,$7);
+              $$=merge(foo,$10);
   
             }
 				   |SWITCH '(' expression ')' statement {}
