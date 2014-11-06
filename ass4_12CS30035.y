@@ -30,7 +30,7 @@ void yyerror(char *s);
     struct symrow* sym;
     struct symrow* id_sym;
   };
-  
+    
   
 }
 %union
@@ -98,14 +98,14 @@ void yyerror(char *s);
 %type <array_exp> array_expression
 
 %nonassoc THEN 
-%nonassoc ELSE
+%nonassoc K
 
 
 %start translation_unit
 /*%type <symRow> assignment_expression*/
 
-%type <symRow> primary_expression postfix_expression unary_expression cast_expression
-%type <symRow> multiplicative_expression additive_expression shift_expression  
+%type <boool> primary_expression postfix_expression unary_expression cast_expression
+%type <boool> multiplicative_expression additive_expression shift_expression  
 %type <symRow> init_declarator_list init_declarator_list_opt 
 %type <symTab> funcdecstart
 %type <symRow> declaration init_declarator
@@ -128,36 +128,36 @@ identifier_opt:
 primary_expression:
 					IDENTIFIER 
   {if(currentSymbolTable->exists($1)){
-        $$=currentSymbolTable->lookup($1);
+        $$.sym=currentSymbolTable->lookup($1);
     }else{
         if(globalSymbolTable.exists($1)){
-            $$=globalSymbolTable.lookup($1);
+            $$.sym=globalSymbolTable.lookup($1);
         }else{
-            $$=currentSymbolTable->lookup($1);
+            $$.sym=currentSymbolTable->lookup($1);
         }
     }
          /*$1->print();*/}
           |constant
          {
-            $$=currentSymbolTable->gentemp(Type($1.type));
+            $$.sym=currentSymbolTable->gentemp(Type($1.type));
 
             switch($1.type){
               case T_INT:
                 /*printf("kkkkkkkkkkkkk%d",$1.ival);*/
-                $$->initial.intval=$1.ival;
+                $$.sym->initial.intval=$1.ival;
                 break;
               case T_DOUBLE:
-                $$->initial.doubleval=$1.dval;
+                $$.sym->initial.doubleval=$1.dval;
                 break;
               case T_CHAR:
-                $$->initial.charval=$1.cval;
+                $$.sym->initial.charval=$1.cval;
                 break;
               default:
                 break;
             }
          }
 				 |STR_LITERAL{}
-				 | '(' expression ')' {$$=$2.sym;}
+				 | '(' expression ')' {$$=$2;}
 				  ;
 constant:
 		INT_CONST { $$.type=T_INT; $$.ival=$1;}
@@ -168,27 +168,27 @@ constant:
 postfix_expression:
           primary_expression {$$=$1; /*$$->print();*/}
 					/*|postfix_expression '[' expression ']'*/
-          |array_expression{$$=currentSymbolTable->gentemp($1.type->typ); quads.emit(Q_ARRACC,$$->name,$1.id_sym->name,$1.sym->name);}
+          |array_expression{$$.sym=currentSymbolTable->gentemp($1.type->typ); quads.emit(Q_ARRACC,$$.sym->name,$1.id_sym->name,$1.sym->name);}
 					|postfix_expression '(' argument_expression_list_opt ')' {
-           $$=currentSymbolTable->gentemp($1->nested_table->lookup("retVal")->type);
+           $$.sym=currentSymbolTable->gentemp($1.sym->nested_table->lookup("retVal")->type);
             char c[30];
             sprintf(c,"%d",$3);
-           quads.emit(Q_FUNCALL,$$->name,$1->name,c); }
+           quads.emit(Q_FUNCALL,$$.sym->name,$1.sym->name,c); }
 				  |postfix_expression '.' IDENTIFIER
 				  |postfix_expression ARR IDENTIFIER
 				  |postfix_expression INC  
           {
-            $$=currentSymbolTable->gentemp(Type($1->type.typ));
-            $$->setInitial($$->type.typ,$1->initial);
-            quads.emit($$->name,$1->name);
-            quads.emit(Q_PLUS,$1->name,$$->name,"1");
+            $$.sym=currentSymbolTable->gentemp(Type($1.sym->type.typ));
+            $$.sym->setInitial($$.sym->type.typ,$1.sym->initial);
+            quads.emit($$.sym->name,$1.sym->name);
+            quads.emit(Q_PLUS,$1.sym->name,$$.sym->name,"1");
 
           }
           |postfix_expression DEC{
-            $$=currentSymbolTable->gentemp(Type($1->type.typ));
-            $$->setInitial($$->type.typ,$1->initial);
-            quads.emit($$->name,$1->name);
-            quads.emit(Q_MINUS,$1->name,$$->name,"1");
+            $$.sym=currentSymbolTable->gentemp(Type($1.sym->type.typ));
+            $$.sym->setInitial($$.sym->type.typ,$1.sym->initial);
+            quads.emit($$.sym->name,$1.sym->name);
+            quads.emit(Q_MINUS,$1.sym->name,$$.sym->name,"1");
           }
 				  |'(' type_name ')' '{' initializer_list '}' {}
 				  |'(' type_name ')' '{' initializer_list ',' '}'{}
@@ -220,14 +220,14 @@ argument_expression_list:
 unary_expression:
 				postfix_expression {$$=$1;}
         |INC unary_expression {
-            $$=currentSymbolTable->gentemp(Type($2->type.typ));
-            quads.emit(Q_PLUS,$2->name,$2->name,"1");
-            quads.emit($$->name,$2->name);
+            $$.sym=currentSymbolTable->gentemp(Type($2.sym->type.typ));
+            quads.emit(Q_PLUS,$2.sym->name,$2.sym->name,"1");
+            quads.emit($$.sym->name,$2.sym->name);
         }
         |DEC unary_expression {
-            $$=currentSymbolTable->gentemp(Type($2->type.typ));
-            quads.emit(Q_MINUS,$2->name,$2->name,"1");
-            quads.emit($$->name,$2->name);
+            $$.sym=currentSymbolTable->gentemp(Type($2.sym->type.typ));
+            quads.emit(Q_MINUS,$2.sym->name,$2.sym->name,"1");
+            quads.emit($$.sym->name,$2.sym->name);
          }
         |unary_operator cast_expression {}
 				|SIZEOF unary_expression {}
@@ -264,24 +264,24 @@ multiplicative_expression:
             {
               struct symrow *t1;
               struct symrow *t2;
-              typecheck($1,$3,&t1,&t2);
-                $$=currentSymbolTable->gentemp(Type(t1->type.typ));
-                quads.emit(Q_MULT,$$->name,t1->name,t2->name);
+              typecheck($1.sym,$3.sym,&t1,&t2);
+                $$.sym=currentSymbolTable->gentemp(Type(t1->type.typ));
+                quads.emit(Q_MULT,$$.sym->name,t1->name,t2->name);
  
             }
 						|multiplicative_expression '/' cast_expression
             {
               struct symrow *t1;
               struct symrow *t2;
-              typecheck($1,$3,&t1,&t2);
-                $$=currentSymbolTable->gentemp(Type(t1->type.typ));
-                quads.emit(Q_DIVISION,$$->name,t1->name,t2->name);
+              typecheck($1.sym,$3.sym,&t1,&t2);
+                $$.sym=currentSymbolTable->gentemp(Type(t1->type.typ));
+                quads.emit(Q_DIVISION,$$.sym->name,t1->name,t2->name);
  
             }
 						|multiplicative_expression '%' cast_expression
             {
-               $$=currentSymbolTable->gentemp(Type($1->type.typ));
-                quads.emit(Q_MODULO,$$->name,$1->name,$3->name);
+               $$.sym=currentSymbolTable->gentemp(Type($1.sym->type.typ));
+                quads.emit(Q_MODULO,$$.sym->name,$1.sym->name,$3.sym->name);
                 
             }
 						;
@@ -291,17 +291,17 @@ additive_expression:
             { 
               struct symrow *t1;
               struct symrow *t2;
-              typecheck($1,$3,&t1,&t2);
-                $$=currentSymbolTable->gentemp(Type(t1->type.typ));
-                quads.emit(Q_PLUS,$$->name,t1->name,t2->name);
+              typecheck($1.sym,$3.sym,&t1,&t2);
+                $$.sym=currentSymbolTable->gentemp(Type(t1->type.typ));
+                quads.emit(Q_PLUS,$$.sym->name,t1->name,t2->name);
  
             }
 				   |additive_expression '-' multiplicative_expression
             { struct symrow *t1;
               struct symrow *t2;
-              typecheck($1,$3,&t1,&t2);
-                $$=currentSymbolTable->gentemp(Type(t1->type.typ));
-                quads.emit(Q_MINUS,$$->name,t1->name,t2->name);
+              typecheck($1.sym,$3.sym,&t1,&t2);
+                $$.sym=currentSymbolTable->gentemp(Type(t1->type.typ));
+                quads.emit(Q_MINUS,$$.sym->name,t1->name,t2->name);
  
             }
 				   ;
@@ -309,20 +309,20 @@ shift_expression:
 				additive_expression {$$=$1;}
 				|shift_expression LSH additive_expression
           { 
-              struct symrow* t = xtoInt($3);
-                $$=currentSymbolTable->gentemp($1->type.typ);
-                quads.emit(Q_LSH,$$->name,$1->name,t->name);
+              struct symrow* t = xtoInt($3.sym);
+                $$.sym=currentSymbolTable->gentemp($1.sym->type.typ);
+                quads.emit(Q_LSH,$$.sym->name,$1.sym->name,t->name);
           }
 				|shift_expression RSH additive_expression
           {
-                struct symrow* t = xtoInt($3);
-                $$=currentSymbolTable->gentemp($1->type.typ);
-                quads.emit(Q_RSH,$$->name,$1->name,t->name);
+                struct symrow* t = xtoInt($3.sym);
+                $$.sym=currentSymbolTable->gentemp($1.sym->type.typ);
+                quads.emit(Q_RSH,$$.sym->name,$1.sym->name,t->name);
 
             }
 				;
 relational_expression:
-					 shift_expression {$$.sym=$1; $$.truelist=new vector<int>; $$.falselist=new vector<int>; $$.isBexp=false;}
+					 shift_expression {$$=$1;}
 					 |relational_expression '<' shift_expression
           { 
            
@@ -331,7 +331,7 @@ relational_expression:
                 $$.sym=currentSymbolTable->gentemp(Type());
                 $$.truelist=makelist(quads.size);
                 $$.falselist=makelist(quads.size+1);
-                quads.emit(Q_REL_IFLT,-1,$1.sym->name,$3->name);
+                quads.emit(Q_REL_IFLT,-1,$1.sym->name,$3.sym->name);
                 quads.emit(Q_GOTO,-1);
                 $$.isBexp=true;
               /*}*/
@@ -345,7 +345,7 @@ relational_expression:
                 $$.truelist=makelist(quads.size);
                 $$.falselist=makelist(quads.size+1);
 
-                quads.emit(Q_REL_IFGT,-1,$1.sym->name,$3->name);
+                quads.emit(Q_REL_IFGT,-1,$1.sym->name,$3.sym->name);
                 quads.emit(Q_GOTO,-1);
                 $$.isBexp=true;
                 
@@ -357,7 +357,7 @@ relational_expression:
                 $$.sym=currentSymbolTable->gentemp(Type());
                 $$.truelist=makelist(quads.size);
                 $$.falselist=makelist(quads.size+1);
-                quads.emit(Q_REL_IFGTE,-1,$1.sym->name,$3->name);
+                quads.emit(Q_REL_IFGTE,-1,$1.sym->name,$3.sym->name);
                 quads.emit(Q_GOTO,-1);
                 $$.isBexp=true;
               /*}*/
@@ -369,7 +369,7 @@ relational_expression:
                 $$.truelist=makelist(quads.size);
                 $$.falselist=makelist(quads.size+1);
 
-                quads.emit(Q_REL_IFLTE,-1,$1.sym->name,$3->name);
+                quads.emit(Q_REL_IFLTE,-1,$1.sym->name,$3.sym->name);
                 quads.emit(Q_GOTO,-1);
                 $$.isBexp=true;
               /*}*/
@@ -476,25 +476,25 @@ assignment_expression_opt: {}
 assignment_expression:
 					 conditional_expression {$$=$1;}
 					 |unary_expression assignment_operator assignment_expression
-            { $$.sym=$1;
+            { $$.sym=$1.sym;
               if($3.isBexp){
                   backpatch($3.truelist,quads.size);
                   backpatch($3.falselist,quads.size+1);
-                  quads.emit($1->name,TRUE_VAL); 
-                  quads.emit($1->name,FALSE_VAL); 
+                  quads.emit($1.sym->name,TRUE_VAL); 
+                  quads.emit($1.sym->name,FALSE_VAL); 
               }else{
 
               struct symrow *t =$3.sym;
-              if($1->type.typ==T_INT){
+              if($1.sym->type.typ==T_INT){
                 t=xtoInt($3.sym);
               }
-              if($1->type.typ==T_CHAR){
+              if($1.sym->type.typ==T_CHAR){
                 t=xtoChar($3.sym);
               }
-              if($1->type.typ==T_DOUBLE){
+              if($1.sym->type.typ==T_DOUBLE){
                 t=xtoDouble($3.sym);
               }
-              quads.emit($1->name,t->name);
+              quads.emit($1.sym->name,t->name);
             }
           }
            |array_expression assignment_operator assignment_expression 
@@ -811,13 +811,13 @@ expression_statement:
 					expression_opt ';' { $$=new vector<int>(); }
 					;
 selection_statement:
-				   IF '(' booexpression ')' M statement K %prec THEN { backpatch($3.truelist,$5); $$=merge($3.falselist,$6); }
-				   |IF '(' booexpression ')'  M statement N ELSE M statement
+				   IF '(' booexpression ')' M statement   %prec THEN { backpatch($3.truelist,$5); $$=merge($3.falselist,$6); nEmit = true; }
+				   |IF '(' booexpression ')'  M statement K N ELSE M statement
            {
               backpatch($3.truelist, $5);
-              backpatch($3.falselist, $9);
-              vector<int>* foo = merge($6,$7);
-              $$=merge(foo,$10);
+              backpatch($3.falselist, $10);
+              vector<int>* foo = merge($6,$8);
+              $$=merge(foo,$11);
   
             }
 				   |SWITCH '(' expression ')' statement {}
@@ -867,8 +867,7 @@ declaration_list:
 				|declaration_list declaration
 				;
 M: {$$=quads.size;};
-N: {$$=makelist(quads.size); quads.emit(Q_GOTO,-1);};
-K:;
+N: { $$=makelist(quads.size); quads.emit(Q_GOTO,-1);};
 		  
 
 %%
