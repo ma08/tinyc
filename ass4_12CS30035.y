@@ -451,13 +451,14 @@ logical_OR_expression:
 					 logical_AND_expression {$$=$1;}
 					 |logical_OR_expression OR M logical_AND_expression M
           {
-              if(!($1.isBexp)){
+              /*if(!($1.isBexp)){
                 xtobool(&$1);
                 backpatch($1.falselist,$5+2);
               }else{
                 backpatch($1.falselist,$5);
               }
-              xtobool(&$4);
+              xtobool(&$4);*/
+              backpatch($1.falselist,$3);
               $$.falselist=$4.falselist;
               $$.truelist=merge($1.truelist,$4.truelist);
               $$.isBexp=true;
