@@ -112,7 +112,7 @@ void yyerror(char *s);
 %type <intValue> M
 
 %type <boool> logical_AND_expression logical_OR_expression inclusive_OR_expression relational_expression equality_expression expression_opt
-%type <boool> AND_expression exclusive_OR_expression  conditional_expression expression booexpression assignment_expression assignment_expression_opt initializer
+%type <boool> AND_expression exclusive_OR_expression  conditional_expression expression booexpression booexpression_opt assignment_expression assignment_expression_opt initializer
 
 
 %type <nextlist> statement labeled_statement compound_statement jump_statement iteration_statement expression_statement selection_statement 
@@ -518,11 +518,16 @@ assignment_operator:
 				   |BIAND_ASSIGN
 				   |BIOR_ASSIGN
 				   ;
-expression_opt:{}
+expression_opt:{$$.sym=NULL;}
 			  |expression {$$=$1;}
 			  ;
 
 booexpression: expression {xtobool(&$1); $$=$1;}
+             ;
+booexpression_opt: {}
+                 |booexpression
+              ;
+
 
 expression:
 		  assignment_expression {$$=$1;}
@@ -802,8 +807,8 @@ expression_statement:
 					expression_opt ';' { $$=new vector<int>(); }
 					;
 selection_statement:
-				   IF '(' expression ')' M statement { backpatch($3.truelist,$5); $$=merge($3.falselist,$6); }
-				   |IF '(' expression ')'  M statement N ELSE M statement
+				   IF '(' booexpression ')' M statement { backpatch($3.truelist,$5); $$=merge($3.falselist,$6); }
+				   |IF '(' booexpression ')'  M statement N ELSE M statement
            {
               backpatch($3.truelist, $5);
               backpatch($3.falselist, $9);
@@ -816,15 +821,10 @@ selection_statement:
 iteration_statement:
 				   WHILE M '(' booexpression ')' M statement {
 
-if(!$4.isBexp) {
-  xtobool(&$4);
-
-
-}
 
 backpatch($7,$2); backpatch($4.truelist,$6); $$=$4.falselist; quads.emit(Q_GOTO,$2); }
-				   |DO M statement M WHILE '(' expression ')' ';' {backpatch($7.truelist,$2); backpatch($3,$4); $$=$7.falselist;}
-				   |FOR '(' expression_opt ';'  M expression_opt ';' M expression_opt N ')' M statement 
+				   |DO M statement M WHILE '(' booexpression ')' ';' {backpatch($7.truelist,$2); backpatch($3,$4); $$=$7.falselist;}
+				   |FOR '(' expression_opt ';'  M booexpression_opt ';' M expression_opt N ')' M statement 
    { backpatch($6.truelist,$12); backpatch($10,$5); backpatch($13,$8); quads.emit(Q_GOTO, $8); $$=$6.falselist;  }
 				   |FOR '(' declaration expression_opt ';' expression_opt ')' statement  {}
 				   ;
@@ -832,7 +832,7 @@ jump_statement:
 			  GOTO IDENTIFIER ';' {}
 			  |CONTINUE ';' {}
 			  |BREAK ';' {}
-			  |RETURN expression_opt ';' {}
+			  |RETURN expression_opt ';' {char c[1];c[0]='\0'; if($2.sym!=NULL){ quads.emit(Q_RET, $2.sym->name); }else{ quads.emit(Q_RET, c); }}
 			  ;
 
 

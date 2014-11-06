@@ -380,6 +380,13 @@ void Quad::print(){
     case Q_GOTO:
       printf("goto %s",this->res);
       break;
+    case Q_RET:
+      if(this->res!=NULL)
+        printf("return %s",this->res);
+      else
+        printf("return");
+      break;
+
     case Q_ARRACC:
       printf("%s = %s[%s]",this->res,this->arg1,this->arg2);
       break;
