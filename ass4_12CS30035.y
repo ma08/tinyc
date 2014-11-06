@@ -168,7 +168,7 @@ constant:
 postfix_expression:
           primary_expression {$$=$1; /*$$->print();*/}
 					/*|postfix_expression '[' expression ']'*/
-          |array_expression{$$.sym=currentSymbolTable->gentemp($1.type->typ); quads.emit(Q_ARRACC,$$.sym->name,$1.id_sym->name,$1.sym->name);}
+          |%prec THEN array_expression{$$.sym=currentSymbolTable->gentemp($1.type->typ); quads.emit(Q_ARRACC,$$.sym->name,$1.id_sym->name,$1.sym->name);}
 					|postfix_expression '(' argument_expression_list_opt ')' {
            $$.sym=currentSymbolTable->gentemp($1.sym->nested_table->lookup("retVal")->type);
             char c[30];
@@ -497,16 +497,16 @@ assignment_expression:
               quads.emit($1.sym->name,t->name);
             }
           }
-           |array_expression assignment_operator assignment_expression 
+           |K array_expression assignment_operator assignment_expression 
            {
-              if($3.isBexp){
-                  backpatch($3.truelist,quads.size);
-                  backpatch($3.falselist,quads.size+1);
-                  quads.emit(Q_ARR_COPY,$1.id_sym->name,$1.sym->name,"TRUE_VAL"); 
-                  quads.emit(Q_ARR_COPY,$1.id_sym->name,$1.sym->name,"FALSE_VAL"); 
+              if($4.isBexp){
+                  backpatch($4.truelist,quads.size);
+                  backpatch($4.falselist,quads.size+1);
+                  quads.emit(Q_ARR_COPY,$2.id_sym->name,$2.sym->name,"TRUE_VAL"); 
+                  quads.emit(Q_ARR_COPY,$2.id_sym->name,$2.sym->name,"FALSE_VAL"); 
                 }
                 else
-                  quads.emit(Q_ARR_COPY,$1.id_sym->name,$1.sym->name,$3.sym->name); 
+                  quads.emit(Q_ARR_COPY,$2.id_sym->name,$2.sym->name,$4.sym->name); 
            }
 					 ;
 assignment_operator:
@@ -811,7 +811,7 @@ expression_statement:
 					expression_opt ';' { $$=new vector<int>(); }
 					;
 selection_statement:
-				   IF '(' booexpression ')' M statement   %prec THEN { backpatch($3.truelist,$5); $$=merge($3.falselist,$6); nEmit = true; }
+				   IF '(' booexpression ')' M statement   %prec THEN { backpatch($3.truelist,$5); $$=merge($3.falselist,$6);}
 				   |IF '(' booexpression ')'  M statement K N ELSE M statement
            {
               backpatch($3.truelist, $5);
