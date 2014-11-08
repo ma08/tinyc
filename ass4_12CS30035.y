@@ -850,7 +850,7 @@ external_declaration:
 					|declaration
 					;
 function_definition:
-           declaration_specifiers declarator  declaration_list_opt temp1 compound_statement M temp2 {/*backpatch($5,$6);*/}
+           declaration_specifiers declarator  declaration_list_opt temp1 compound_statement M temp2 {backpatch($5,$6);}
 				   ;
 
 temp1:{currentSymbolTable=lastSymbolTable; quads.emit(Q_FUNCSTART,lastFunction);};
