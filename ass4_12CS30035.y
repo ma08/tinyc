@@ -836,7 +836,7 @@ jump_statement:
 			  GOTO IDENTIFIER ';' {}
 			  |CONTINUE ';' {}
 			  |BREAK ';' {}
-			  |RETURN expression_opt ';' {char c[1];c[0]='\0'; if($2.sym!=NULL){ quads.emit(Q_RET, $2.sym->name); }else{ quads.emit(Q_RET, c); }}
+        |RETURN expression_opt ';' {$$ = new vector<int>(); char c[1];c[0]='\0'; if($2.sym!=NULL){ quads.emit(Q_RET, $2.sym->name); }else{ quads.emit(Q_RET, c); }}
 			  ;
 
 
