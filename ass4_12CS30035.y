@@ -729,8 +729,8 @@ parameter_type_list:
 				   |parameter_list ',' ELLIPSIS
 				   ;
 parameter_list:
-			  parameter_declaration
-			  |parameter_list ',' parameter_declaration
+        parameter_declaration { currentSymbolTable->params=1; }
+        |parameter_list ',' parameter_declaration { currentSymbolTable->params++; }
 			  ;
 parameter_declaration:
 					 declaration_specifiers declarator
@@ -850,12 +850,12 @@ external_declaration:
 					|declaration
 					;
 function_definition:
-					 declaration_specifiers declarator  declaration_list_opt temp1 compound_statement M temp2 {/*backpatch($5,$6);*/}
+           declaration_specifiers declarator  declaration_list_opt temp1 compound_statement M temp2 {/*backpatch($5,$6);*/}
 				   ;
 
 temp1:{currentSymbolTable=lastSymbolTable; quads.emit(Q_FUNCSTART,lastFunction);};
 
-temp2:{currentSymbolTable=&globalSymbolTable; quads.emit(Q_FUNCEND,lastFunction);};
+temp2:{currentSymbolTable=&globalSymbolTable;  quads.emit(Q_FUNCEND,lastFunction);};
 
 declaration_list_opt:
 					|declaration_list

@@ -116,6 +116,7 @@ void typecheck(struct symrow* e1, struct symrow* e2,struct symrow **t1, struct s
 
 void Symboltable::print(){
   int i;
+  printf("\nparams: %d \n",this->params);
   for (i = 0; i < this->size; ++i)
   {
     this->arr[i].print();
@@ -431,6 +432,74 @@ void Quad::print(){
       break;
   }
 };
+
+bool isNumber(char* a){
+  int i=0;
+  while(a[i]!='\0'){
+    if(a[i]>='0'&&a[i]<='9'){
+      i++;
+      continue;
+    }
+    else{
+      return false;
+    }
+  }
+  return true;
+}
+
+void Quad::conv2x86(){
+  switch(this->op){
+    case Q_FUNCSTART:
+      printf("\n\tpushl %%ebp");
+      printf("\n\tmovl %%esp, %%esp");
+      //printf("\n\tsubl %%esp");
+      break;
+    case Q_PLUS:
+      if(isNumber(this->arg2)){
+        if(strcmp(this->res,this->arg1)==0){
+          printf("\n\taddl $%s, _%s$(%%ebp)",this->arg2,this->res);
+          break;
+        }
+        printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
+        printf("\n\taddl $%s, %%eax",this->arg2);
+        printf("\n\tmovl %%eax, _%s$(%%ebp)",this->res);
+        break;
+      }
+      printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
+      printf("\n\taddl _%s$(%%ebp), %%eax",this->arg2);
+      printf("\n\tmovl %%eax, _%s$(%%ebp)",this->res);
+      break;
+    case Q_MINUS:
+      if(isNumber(this->arg2)){
+        if(strcmp(this->res,this->arg1)==0){
+          printf("\n\tsubl $%s, _%s$(%%ebp)",this->arg2,this->res);
+          break;
+        }
+        printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
+        printf("\n\tsubl $%s, %%eax",this->arg2);
+        printf("\n\tmovl %%eax, _%s$(%%ebp)",this->res);
+        break;
+      }
+      printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
+      printf("\n\tsubl _%s$(%%ebp), %%eax",this->arg2);
+      printf("\n\tmovl %%eax, _%s$(%%ebp)",this->res);
+      break;
+    case Q_FUNCEND:
+      break;
+    default:
+      break;
+  }
+}
+
+void QuadArr::gen2x86(){
+  printf("\n\n\n");
+  int i;
+  for (i = 0; i < this->size; ++i)
+  {
+    this->arr[i].conv2x86();
+    
+  }
+}
 
 void QuadArr::print(){
   int i;

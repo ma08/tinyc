@@ -169,6 +169,7 @@ class Symboltable{
     struct symrow arr[MAX];
     int tempcount ;
     int size;
+    int params;
     
   private:
     //int size = 0;
@@ -184,6 +185,7 @@ class Quad{
     char res[15];
 
     void print();
+    void conv2x86();
  
 };
 
@@ -197,6 +199,7 @@ class QuadArr{
     void emit(char *r, char* a);
     void emit(char *r, int num);
     void print();
+    void gen2x86();
 
     friend void backpatch(const vector<int>* p, int label);
 

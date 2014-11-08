@@ -9,5 +9,6 @@ int main() {
   printf("\n-------------GLOBAL SYMBOL TABLE--------------\n");
   currentSymbolTable->print();
   quads.print();
+  /*quads.gen2x86();*/
 	return 0;
 }
