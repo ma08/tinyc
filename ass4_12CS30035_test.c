@@ -16,10 +16,13 @@ return fib(x-1)+fib(x-2);
 
 int main(){
   int a=5;
-  int *b;
-  b=&a;
-  a=*b;
-
+  int d;
+  int *c;
+  int **b;
+  c=&a;
+  b=&c;
+  d=**b;
+  printi(d);
 /*for(i=0;i<2;i++){
   for(j=0;j<2;j++){
     b[i][j]=i+j;

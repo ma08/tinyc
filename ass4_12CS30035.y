@@ -30,6 +30,11 @@ void yyerror(char *s);
     struct symrow* sym;
     struct symrow* id_sym;
   };
+  struct pointer_type{
+
+    struct symrow* sym;
+    int n;
+  };
     
   
 }
@@ -39,7 +44,8 @@ void yyerror(char *s);
   Symboltable* symTab;
   struct d_bool boool;
   vector<int>* nextlist;
-  struct array_type array_exp;
+  struct array_type array_exp;  
+  struct pointer_type p;
   
   enum Tp typeValue;
   int intValue; 
@@ -96,6 +102,7 @@ void yyerror(char *s);
 %type <typeValue> type_specifier
 
 %type <array_exp> array_expression
+%type <p> p_expression
 
 %nonassoc THEN 
 %nonassoc ELSE
@@ -257,11 +264,10 @@ unary_expression:
           }*/
 
         }
-        |'*' cast_expression 
-        {
-          
-              $$.sym=currentSymbolTable->gentemp(Type(*$2.sym->type.next));
-              quads.emit(Q_DEREF,$$.sym->name,$2.sym->name);
+        |p_expression 
+        {     $$.sym=$1.sym; $$.n=$1.n;
+              $$.sym=currentSymbolTable->gentemp(Type(*($1.sym->type.next)));
+              quads.emit(Q_DEREF,$$.sym->name,$1.sym->name);
         }
 				;
 unary_operator:
@@ -274,6 +280,10 @@ cast_expression:
 			   unary_expression {$$=$1;}
 			   |'(' type_name ')' cast_expression {}
 			   ;
+
+p_expression:
+            '*' unary_expression {$$.sym=$2.sym; $$.n++;}
+
 multiplicative_expression:
 						cast_expression {$$=$1;}
 						|multiplicative_expression '*' cast_expression 
@@ -525,6 +535,16 @@ assignment_expression:
                 else
                   quads.emit(Q_ARR_COPY,$1.id_sym->name,$1.sym->name,$3.sym->name); 
            }
+          |p_expression assignment_operator assignment_expression
+          {
+            struct symrow* sr;
+            sr=$1.n==1?$1.sym:currentSymbolTable->gentemp(T_POINTER);
+            while(--$1.n){
+              quads.emit(Q_DEREF_COPY,sr->name,sr->name);
+            }
+            
+            quads.emit(Q_DEREF_COPY,sr->name,$3.sym->name);
+          }
 					 ;
 assignment_operator:
 				   '='

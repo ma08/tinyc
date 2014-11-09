@@ -417,7 +417,6 @@ void Quad::print(){
       else
         printf("return");
       break;
-
     case Q_ARRACC:
       printf("%s = %s[%s]",this->res,this->arg1,this->arg2);
       break;
@@ -457,6 +456,9 @@ void Quad::print(){
       break;
     case Q_DEREF:
       printf("%s =*%s",this->res,this->arg1);
+      break;
+    case Q_DEREF_COPY:
+      printf("*%s=%s",this->res,this->arg1);
       break;
     default:
       break;
@@ -545,8 +547,6 @@ void Quad::conv2x86(int x,vector<int>& labels){
       }
       printf("\n\tmovl _%s$(%%ebp,%%eax,1), %%edx",this->arg1);
       printf("\n\tmovl %%edx, _%s$(%%ebp)",this->res);
-      //printf("\n\tpush %%eax");
-      //printf("\n\tcall printi");
       break;
     case Q_ARR_COPY:
       if(isNumber(this->arg1)){
@@ -556,8 +556,20 @@ void Quad::conv2x86(int x,vector<int>& labels){
       }
       printf("\n\tmovl _%s$(%%ebp), %%edx",this->arg2);
       printf("\n\tmovl %%edx, _%s$(%%ebp,%%eax,1)",this->res);
-      //printf("\n\tpush %%eax");
-      //printf("\n\tcall printi");
+      break;
+    case Q_DEREF:
+      printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
+      printf("\n\tmovl (%%eax), %%eax");
+      printf("\n\tmovl %%eax, _%s$(%%ebp)",this->res);
+      break;
+    case Q_DEREF_COPY:
+      printf("\n\tmovl _%s$(%%ebp), %%edx",this->arg1);
+      printf("\n\tmovl _%s$(%%ebp), %%eax",this->res);
+      printf("\n\tmovl  %%edx, (%%eax)");
+      break;
+    case Q_POINT:
+      printf("\n\tleal _%s$(%%ebp), %%eax",this->arg1);
+      printf("\n\tmovl %%eax, _%s$(%%ebp)",this->res);
       break;
     case Q_MODULO:
       printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
