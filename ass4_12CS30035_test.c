@@ -15,8 +15,11 @@ return fib(x-1)+fib(x-2);
 }
 
 int main(){
-int b[9];
-int i=4,j=9;
+  int a=5;
+  int *b;
+  b=&a;
+  a=*b;
+
 /*for(i=0;i<2;i++){
   for(j=0;j<2;j++){
     b[i][j]=i+j;
@@ -38,8 +41,5 @@ for (i = 0; i < 9; ++i)
   x=(b[i]);
   printi(x);
 }*/
-i=i<j;
-
-printi(i);
 return 0;
 }

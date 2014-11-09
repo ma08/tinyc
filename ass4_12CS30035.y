@@ -243,7 +243,9 @@ unary_expression:
 				|SIZEOF '(' type_name ')' {}
         |'&' cast_expression  
         {
-              /*$$=currentSymbolTable->gentemp(Type($2->type.next->typ));*/
+              $$.sym=currentSymbolTable->gentemp(Type($2.sym->type));
+              $$.sym->makePointer(1);
+              quads.emit(Q_POINT,$$.sym->name,$2.sym->name);
               /*quads.emit(Q_DEREF,"c",$2->name);*/
           /*if($2->type.typ==T_POINTER){
             if($2->type.next->typ!=T_POINTER||$2->type.next->typ!=T_ARRAY){
@@ -255,10 +257,15 @@ unary_expression:
           }*/
 
         }
+        |'*' cast_expression 
+        {
+          
+              $$.sym=currentSymbolTable->gentemp(Type(*$2.sym->type.next));
+              quads.emit(Q_DEREF,$$.sym->name,$2.sym->name);
+        }
 				;
 unary_operator:
-			  '*'
-			  |'+'
+			  '+'
 			  |'-'
 			  |'~'
 			  |'!'

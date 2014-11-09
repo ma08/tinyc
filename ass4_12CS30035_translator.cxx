@@ -374,6 +374,10 @@ void Quad::print(){
     case Q_AMPERSAND:
       printf("%s = %s & %s",this->res,this->arg1,this->arg2);
       break;
+    case Q_POINT:
+      printf("%s = &%s",this->res,this->arg1);
+      break;
+
     case Q_AROR:
       printf("%s = %s | %s",this->res,this->arg1,this->arg2);
       break;
@@ -452,7 +456,7 @@ void Quad::print(){
       printf("%s =double2Char(%s)",this->res,this->arg1);
       break;
     case Q_DEREF:
-      printf("%s =&%s",this->res,this->arg1);
+      printf("%s =*%s",this->res,this->arg1);
       break;
     default:
       break;
