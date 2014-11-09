@@ -524,6 +524,7 @@ assignment_expression:
           }
            |array_expression assignment_operator assignment_expression 
            {
+              /*printf("ssssssssssssssssss");*/
               if($3.isBexp){
                   backpatch($3.truelist,quads.size);
                   backpatch($3.falselist,quads.size+1);

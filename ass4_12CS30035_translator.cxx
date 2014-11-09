@@ -33,10 +33,31 @@ Symboltable* currentSymbolTable = &globalSymbolTable;
 Symboltable* lastSymbolTable ;
 QuadArr quads;
 int getsize(Type* type){
+    
+    Type* t = type;
+    int x=1;
+    if(t->typ==T_POINTER){
+      switch(t->next->typ){
+          case T_INT:
+            x=size_int;
+            break;
+          case T_CHAR:
+            x=size_char;
+            break;
+          case T_DOUBLE:
+            x=size_double;
+            break;
+          case T_POINTER:
+            x=size_pointer;
+            break;
+          default:
+            break;
+        }
+      return x;
+    }
     if(type->typ!=T_ARRAY)
       return -1;
-    Type* t = type->next;
-    int x=1;
+    t=t->next;
     while(t!=NULL){
       if(t->typ!=T_ARRAY){
         switch(t->typ){
@@ -80,7 +101,8 @@ void Symboltable::activationRecord(){
   for (i = 0; i < this->params; ++i)
   {
     this->arr[i].ebp_offset=x;
-    x=x+this->arr[i].size;
+    //x=x+this->arr[i].size;
+    x=x+4;
   }
   if(strcmp(this->arr[i].name,"retVal")==0){
     i++;
@@ -494,6 +516,7 @@ bool isNumber(char* a){
 char* lastfun;
 
 void Quad::conv2x86(int x,vector<int>& labels){
+  //this->print();
   int i;
   Symboltable* st;
   if(find(labels.begin(),labels.end(),x)!=labels.end()){
@@ -561,12 +584,23 @@ void Quad::conv2x86(int x,vector<int>& labels){
         printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg2);
       }
 
+      
+      if(currentSymbolTable->lookup(this->arg1)->type.typ==T_POINTER){
+        printf("\n\tmovl _%s$(%%ebp), %%edx",this->arg1);
+        if(currentSymbolTable->lookup(this->arg1)->type.next->typ==T_CHAR){
+          printf("\n\tmovzbl (%%edx,%%eax,1), %%eax");
+          printf("\n\tmovb %%al, _%s$(%%ebp)",this->res);
+        }else{
+          printf("\n\tmovl (%%edx,%%eax,1), %%eax");
+          printf("\n\tmovl %%eax, _%s$(%%ebp)",this->res);
+        }
+        break;
+      }
       if(innerType(&currentSymbolTable->lookup(this->arg1)->type)==T_CHAR){
         printf("\n\tmovzbl _%s$(%%ebp,%%eax,1), %%eax",this->arg1);
         printf("\n\tmovb %%al, _%s$(%%ebp)",this->res);
         break;
       }
-
       printf("\n\tmovl _%s$(%%ebp,%%eax,1), %%edx",this->arg1);
       printf("\n\tmovl %%edx, _%s$(%%ebp)",this->res);
       break;
@@ -575,6 +609,18 @@ void Quad::conv2x86(int x,vector<int>& labels){
         printf("\n\tmovl $%s, %%edx",this->arg1);
       }else{
         printf("\n\tmovl _%s$(%%ebp), %%edx",this->arg1);
+      }
+      if(currentSymbolTable->lookup(this->res)->type.typ==T_POINTER){
+        printf("\n\tmovl _%s$(%%ebp), %%eax",this->res);
+        printf("\n\tleal (%%edx,%%eax,1), %%edx");
+        if(currentSymbolTable->lookup(this->res)->type.next->typ==T_CHAR){
+          printf("\n\tmovzbl _%s$(%%ebp), %%eax",this->arg2);
+          printf("\n\tmovb %%al, (%%edx)");
+        }else{
+          printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg2);
+          printf("\n\tmovb %%edx, (%%edx)");
+        }
+        break;
       }
       if(innerType(&currentSymbolTable->lookup(this->arg1)->type)==T_CHAR){
         printf("\n\tmovzbl _%s$(%%ebp), %%eax",this->arg2);
@@ -614,7 +660,12 @@ void Quad::conv2x86(int x,vector<int>& labels){
       if(currentSymbolTable->lookup(this->res)->type.typ==T_ARRAY){
         printf("\n\tleal _%s$(%%ebp), %%eax",this->res);
       }else{
-        printf("\n\tmovl _%s$(%%ebp), %%eax",this->res);
+        if(currentSymbolTable->lookup(this->res)->type.typ==T_CHAR){
+          printf("\n\tmovzbl _%s$(%%ebp), %%eax",this->res);
+	        printf("movsbl	%%al, %%eax");
+          printf("\n\tpush %%eal");
+        }else
+          printf("\n\tmovl _%s$(%%ebp), %%eax",this->res);
       }
       printf("\n\tpush %%eax");
       break;
@@ -649,6 +700,12 @@ void Quad::conv2x86(int x,vector<int>& labels){
       printf("\n\tjmp .L%s",this->res);
       break;
     case Q_REL_IFEQ:
+      if(currentSymbolTable->lookup(this->arg1)->type.typ==T_CHAR){
+        printf("\n\tmovzbl _%s$(%%ebp), %%eax",this->arg1);
+        printf("\n\tcmpb _%s$(%%ebp), %%al",this->arg2);
+        printf("\n\tje .L%s",this->res);
+        break;
+      }
       if(isNumber(this->arg2)){
         printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
         printf("\n\tcmpl $%s, %%eax",this->arg2);
@@ -660,6 +717,12 @@ void Quad::conv2x86(int x,vector<int>& labels){
       printf("\n\tje .L%s",this->res);
       break;
     case Q_REL_IFNEQ:
+      if(currentSymbolTable->lookup(this->arg1)->type.typ==T_CHAR){
+        printf("\n\tmovzbl _%s$(%%ebp), %%eax",this->arg1);
+        printf("\n\tcmpb _%s$(%%ebp), %%al",this->arg2);
+        printf("\n\tjne .L%s",this->res);
+        break;
+      }
       if(isNumber(this->arg2)){
         printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
         printf("\n\tcmpl $%s, %%eax",this->arg2);
@@ -671,6 +734,12 @@ void Quad::conv2x86(int x,vector<int>& labels){
       printf("\n\tjne .L%s",this->res);
       break;
     case Q_REL_IFGT:
+      if(currentSymbolTable->lookup(this->arg1)->type.typ==T_CHAR){
+        printf("\n\tmovzbl _%s$(%%ebp), %%eax",this->arg1);
+        printf("\n\tcmpb _%s$(%%ebp), %%al",this->arg2);
+        printf("\n\tjg .L%s",this->res);
+        break;
+      }
       if(isNumber(this->arg2)){
         printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
         printf("\n\tcmpl $%s, %%eax",this->arg2);
@@ -682,6 +751,12 @@ void Quad::conv2x86(int x,vector<int>& labels){
       printf("\n\tjg .L%s",this->res);
       break;
     case Q_REL_IFLT:
+      if(currentSymbolTable->lookup(this->arg1)->type.typ==T_CHAR){
+        printf("\n\tmovzbl _%s$(%%ebp), %%eax",this->arg1);
+        printf("\n\tcmpb _%s$(%%ebp), %%al",this->arg2);
+        printf("\n\tjl .L%s",this->res);
+        break;
+      }
       if(isNumber(this->arg2)){
         printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
         printf("\n\tcmpl $%s, %%eax",this->arg2);
@@ -693,6 +768,12 @@ void Quad::conv2x86(int x,vector<int>& labels){
       printf("\n\tjl .L%s",this->res);
       break;
     case Q_REL_IFGTE:
+      if(currentSymbolTable->lookup(this->arg1)->type.typ==T_CHAR){
+        printf("\n\tmovzbl _%s$(%%ebp), %%eax",this->arg1);
+        printf("\n\tcmpb _%s$(%%ebp), %%al",this->arg2);
+        printf("\n\tjge .L%s",this->res);
+        break;
+      }
       if(isNumber(this->arg2)){
         printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
         printf("\n\tcmpl $%s, %%eax",this->arg2);
@@ -704,6 +785,12 @@ void Quad::conv2x86(int x,vector<int>& labels){
       printf("\n\tjge .L%s",this->res);
       break;
     case Q_REL_IFLTE:
+      if(currentSymbolTable->lookup(this->arg1)->type.typ==T_CHAR){
+        printf("\n\tmovzbl _%s$(%%ebp), %%eax",this->arg1);
+        printf("\n\tcmpb _%s$(%%ebp), %%al",this->arg2);
+        printf("\n\tjle .L%s",this->res);
+        break;
+      }
       if(isNumber(this->arg2)){
         printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
         printf("\n\tcmpl $%s, %%eax",this->arg2);
