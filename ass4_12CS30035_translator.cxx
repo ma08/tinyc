@@ -72,16 +72,16 @@ void Symboltable::activationRecord(){
   if(strcmp(this->arr[i].name,"retVal")==0){
     i++;
   }
-  x=-4;
+  x=0;
   int j;
-  for (j=size-1;  j >= i; j--)
+  for (j=i;  j < this->size; j++)
   {
     if(this->arr[j].type.typ==T_FUNCTION){
       this->arr[j].nested_table->activationRecord();
       continue;
     }
-    this->arr[j].ebp_offset=x;
     x=x-this->arr[j].size;
+    this->arr[j].ebp_offset=x;
   }
    
 }
@@ -496,14 +496,14 @@ void Quad::conv2x86(int x,vector<int>& labels){
       printf("\n%s:",this->res);
       printf("\n\tpushl %%ebp");
       printf("\n\tmovl %%esp, %%ebp");
-      printf("\n\tsubl $%d, %%esp",-st->arr[st->params+1].ebp_offset+st->arr[st->params+1].size);
+      printf("\n\tsubl $%d, %%esp",-st->arr[st->size-1].ebp_offset+st->arr[st->size-1].size);
       //printf("\n\tsubl %%esp");
       break;
     case Q_FUNCEND:
       st=globalSymbolTable.lookup(this->res)->nested_table;
       printf("\n.L1ex%s:",this->res);
       if(strcmp(this->res,"main")!=0){
-        printf("\n\taddl $%d, %%esp",-st->arr[st->params+1].ebp_offset+4);
+        printf("\n\taddl $%d, %%esp",-st->arr[st->size-1].ebp_offset+st->arr[st->size-1].size);
       }
 	    printf("\n\tleave");
       //http://stackoverflow.com/questions/1317081/gccs-assembly-output-of-an-empty-program-on-x86-win32
