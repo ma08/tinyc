@@ -1,5 +1,7 @@
 #include<stdio.h>
 #include<vector>
+#include<algorithm>
+#include<list>
 #include<string.h>
 #include<stdlib.h>
 #include "ass4_12CS30035_translator.h"
@@ -59,6 +61,30 @@ bool typec(struct Type* t1, struct Type* t2){
   }
   return false;
 };
+
+void Symboltable::activationRecord(){
+  int i;int x=8;
+  for (i = 0; i < this->params; ++i)
+  {
+    this->arr[i].ebp_offset=x;
+    x=x+this->arr[i].size;
+  }
+  if(strcmp(this->arr[i].name,"retVal")==0){
+    i++;
+  }
+  x=-4;
+  int j;
+  for (j=size-1;  j >= i; j--)
+  {
+    if(this->arr[j].type.typ==T_FUNCTION){
+      this->arr[j].nested_table->activationRecord();
+      continue;
+    }
+    this->arr[j].ebp_offset=x;
+    x=x-this->arr[j].size;
+  }
+   
+}
 
 void typecheck(struct symrow* e1, struct symrow* e2,struct symrow **t1, struct symrow **t2){
   if(e1->type.typ==T_INT){
@@ -446,13 +472,191 @@ bool isNumber(char* a){
   }
   return true;
 }
+char* lastfun;
 
-void Quad::conv2x86(){
+void Quad::conv2x86(int x,vector<int>& labels){
+  int i;
+  Symboltable* st;
+  if(find(labels.begin(),labels.end(),x)!=labels.end()){
+    printf("\n.L%d:",x);
+  }
   switch(this->op){
     case Q_FUNCSTART:
+      printf("\n\t.globl %s",this->res);
+      printf("\n\t.type %s, @function",this->res);
+      st=globalSymbolTable.lookup(this->res)->nested_table;
+      lastfun=this->res;
+      for (i = 0; i < st->size; ++i)
+      {
+        if(strcmp(st->arr[i].name,"retVal")==0||st->arr[i].type.typ==T_FUNCTION)
+          continue;
+        printf("\n\t_%s$ = %d",st->arr[i].name,st->arr[i].ebp_offset);
+        
+      }
+      printf("\n%s:",this->res);
       printf("\n\tpushl %%ebp");
-      printf("\n\tmovl %%esp, %%esp");
+      printf("\n\tmovl %%esp, %%ebp");
+      printf("\n\tsubl $%d, %%esp",-st->arr[st->params+1].ebp_offset+st->arr[st->params+1].size);
       //printf("\n\tsubl %%esp");
+      break;
+    case Q_FUNCEND:
+      st=globalSymbolTable.lookup(this->res)->nested_table;
+      printf("\n.L1ex%s:",this->res);
+      if(strcmp(this->res,"main")!=0){
+        printf("\n\taddl $%d, %%esp",-st->arr[st->params+1].ebp_offset+4);
+      }
+	    printf("\n\tleave");
+      //http://stackoverflow.com/questions/1317081/gccs-assembly-output-of-an-empty-program-on-x86-win32
+	    printf("\n\tret");
+      printf("\n\t.size %s, .-%s",this->res,this->res);
+      break;
+    case Q_UNARYMINUS:
+      break;
+    case Q_MULT:
+      printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
+      if(isNumber(this->arg2)){
+        printf("\n\timull $%s, %%eax",this->arg2);
+        printf("\n\tmovl %%eax, _%s$(%%ebp)",this->res);
+        break;
+      }
+      printf("\n\timull _%s$(%%ebp), %%eax",this->arg2);
+      printf("\n\tmovl %%eax, _%s$(%%ebp)",this->res);
+      break;
+    case Q_DIVISION:
+      printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
+      printf("\n\tcltd");
+      if(isNumber(this->arg2)){
+        printf("\n\tidivl $%s",this->arg2);
+        printf("\n\tmovl %%eax, _%s$(%%ebp)",this->res);
+        break;
+      }
+      printf("\n\tidivl _%s$(%%ebp)",this->arg2);
+      printf("\n\tmovl %%eax, _%s$(%%ebp)",this->res);
+      break;
+    case Q_ARRACC:
+      if(isNumber(this->arg2)){
+        printf("\n\tmovl $%s, %%eax",this->arg2);
+      }else{
+        printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg2);
+      }
+      printf("\n\tmovl _%s$(%%ebp,%%eax,1), %%edx",this->arg1);
+      printf("\n\tmovl %%edx, _%s$(%%ebp)",this->res);
+      //printf("\n\tpush %%eax");
+      //printf("\n\tcall printi");
+      break;
+    case Q_ARR_COPY:
+      if(isNumber(this->arg1)){
+        printf("\n\tmovl $%s, %%eax",this->arg1);
+      }else{
+        printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
+      }
+      printf("\n\tmovl _%s$(%%ebp), %%edx",this->arg2);
+      printf("\n\tmovl %%edx, _%s$(%%ebp,%%eax,1)",this->res);
+      //printf("\n\tpush %%eax");
+      //printf("\n\tcall printi");
+      break;
+    case Q_MODULO:
+      printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
+      printf("\n\tcltd");
+      if(isNumber(this->arg2)){
+        printf("\n\tidivl $%s",this->arg2);
+        printf("\n\tmovl %%edx, _%s$(%%ebp)",this->res);
+        break;
+      }
+      printf("\n\tidivl _%s$(%%ebp)",this->arg2);
+      printf("\n\tmovl %%edx, _%s$(%%ebp)",this->res);
+      break;
+
+    case Q_PARAM:
+      printf("\n\tmovl _%s$(%%ebp), %%eax",this->res);
+      printf("\n\tpush %%eax");
+      break;
+    case Q_RET:
+      if(this->res[0]!='\0'){
+        printf("\n\tmovl _%s$(%%ebp), %%eax",this->res);
+      }
+      printf("\n\tjmp .L1ex%s",lastfun);
+      break;
+    case Q_FUNCALL:
+      printf("\n\tcall %s",this->arg1);
+      printf("\n\tmovl %%eax, _%s$(%%ebp)",this->res);
+      break;
+    case Q_COPY:
+      if(isNumber(this->arg1)){
+        printf("\n\tmovl $%s, _%s$(%%ebp)",this->arg1,this->res);
+        break;
+      }
+      printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
+      printf("\n\tmovl %%eax, _%s$(%%ebp)",this->res);
+      break;
+    case Q_GOTO:
+      printf("\n\tjmp .L%s",this->res);
+      break;
+    case Q_REL_IFEQ:
+      if(isNumber(this->arg2)){
+        printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
+        printf("\n\tcmpl $%s, %%eax",this->arg2);
+        printf("\n\tje .L%s",this->res);
+        break;
+      }
+      printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
+      printf("\n\tcmpl _%s$(%%ebp), %%eax",this->arg2);
+      printf("\n\tje .L%s",this->res);
+      break;
+    case Q_REL_IFNEQ:
+      if(isNumber(this->arg2)){
+        printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
+        printf("\n\tcmpl $%s, %%eax",this->arg2);
+        printf("\n\tjne .L%s",this->res);
+        break;
+      }
+      printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
+      printf("\n\tcmpl _%s$(%%ebp), %%eax",this->arg2);
+      printf("\n\tjne .L%s",this->res);
+      break;
+    case Q_REL_IFGT:
+      if(isNumber(this->arg2)){
+        printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
+        printf("\n\tcmpl $%s, %%eax",this->arg2);
+        printf("\n\tjg .L%s",this->res);
+        break;
+      }
+      printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
+      printf("\n\tcmpl _%s$(%%ebp), %%eax",this->arg2);
+      printf("\n\tjg .L%s",this->res);
+      break;
+    case Q_REL_IFLT:
+      if(isNumber(this->arg2)){
+        printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
+        printf("\n\tcmpl $%s, %%eax",this->arg2);
+        printf("\n\tjl .L%s",this->res);
+        break;
+      }
+      printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
+      printf("\n\tcmpl _%s$(%%ebp), %%eax",this->arg2);
+      printf("\n\tjl .L%s",this->res);
+      break;
+    case Q_REL_IFGTE:
+      if(isNumber(this->arg2)){
+        printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
+        printf("\n\tcmpl $%s, %%eax",this->arg2);
+        printf("\n\tjge .L%s",this->res);
+        break;
+      }
+      printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
+      printf("\n\tcmpl _%s$(%%ebp), %%eax",this->arg2);
+      printf("\n\tjge .L%s",this->res);
+      break;
+    case Q_REL_IFLTE:
+      if(isNumber(this->arg2)){
+        printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
+        printf("\n\tcmpl $%s, %%eax",this->arg2);
+        printf("\n\tjle .L%s",this->res);
+        break;
+      }
+      printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
+      printf("\n\tcmpl _%s$(%%ebp), %%eax",this->arg2);
+      printf("\n\tjle .L%s",this->res);
       break;
     case Q_PLUS:
       if(isNumber(this->arg2)){
@@ -484,19 +688,42 @@ void Quad::conv2x86(){
       printf("\n\tsubl _%s$(%%ebp), %%eax",this->arg2);
       printf("\n\tmovl %%eax, _%s$(%%ebp)",this->res);
       break;
-    case Q_FUNCEND:
-      break;
+    
     default:
+      printf("\n------\n");
+      this->print();
       break;
   }
 }
 
 void QuadArr::gen2x86(){
   printf("\n\n\n");
+  vector<int> labels;
   int i;
+  for (i = 0; i < globalSymbolTable.size; ++i)
+  {
+    enum Tp x=globalSymbolTable.arr[i].type.typ;
+    if(x==T_INT||x==T_POINTER||x==T_CHAR||x==T_ARRAY){
+      if(globalSymbolTable.arr[i].name[0]=='t')
+        continue;
+      printf("\n\t.comm %s,%d",globalSymbolTable.arr[i].name,globalSymbolTable.arr[i].size);
+    }
+  }
+  printf("\n\t.text");
+  enum Opcode op;
+
+  for(i=0;i<this->size;++i){
+    op=this->arr[i].op;
+    if(op==Q_GOTO||op==Q_REL_IFEQ||op==Q_REL_IFGT||op==Q_REL_IFLT||op==Q_REL_IFLTE||op==Q_REL_IFGTE||op==Q_REL_IFNEQ){
+      /*printf("\n");
+      this->arr[i].print();
+      printf("\n");*/
+      labels.push_back(atoi(this->arr[i].res));
+    }
+  }
   for (i = 0; i < this->size; ++i)
   {
-    this->arr[i].conv2x86();
+    this->arr[i].conv2x86(i,labels);
     
   }
 }

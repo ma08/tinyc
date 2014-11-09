@@ -140,17 +140,24 @@ primary_expression:
           |constant
          {
             $$.sym=currentSymbolTable->gentemp(Type($1.type));
+            
+            char a[30];
 
             switch($1.type){
               case T_INT:
                 /*printf("kkkkkkkkkkkkk%d",$1.ival);*/
                 $$.sym->initial.intval=$1.ival;
+                sprintf(a,"%d",$1.ival);
+                quads.emit($$.sym->name,a);
+                
                 break;
               case T_DOUBLE:
                 $$.sym->initial.doubleval=$1.dval;
                 break;
               case T_CHAR:
                 $$.sym->initial.charval=$1.cval;
+                quads.emit($$.sym->name,a);
+                sprintf(a,"%c",$1.cval);
                 break;
               default:
                 break;
@@ -206,9 +213,11 @@ if(currentSymbolTable->exists($1)){
         }
     }
 
- $$.type=&($$.id_sym->type); $$.sym->initial.intval=getsize($$.type); char c[30]; quads.emit(Q_MULT,$$.sym->name,$$.sym->name,$3.sym->name);  $$.type=$$.type->next;}
+ $$.type=&($$.id_sym->type);   $$.sym->initial.intval=getsize($$.type); char a[30]; sprintf(a,"%d",$$.sym->initial.intval); quads.emit($$.sym->name,a); char c[30]; quads.emit(Q_MULT,$$.sym->name,$$.sym->name,$3.sym->name);  $$.type=$$.type->next;}
 
-           |array_expression '[' expression ']' {$$.sym=currentSymbolTable->gentemp();  $$.sym->initial.intval=getsize($$.type); char c[30]; quads.emit(Q_MULT,$$.sym->name,$$.sym->name,$3.sym->name);  $$.type=$$.type->next; quads.emit(Q_PLUS,$$.sym->name,$$.sym->name,$1.sym->name); $$.id_sym=$1.id_sym;}
+           |array_expression '[' expression ']' {$$.sym=currentSymbolTable->gentemp();   $$.sym->initial.intval=getsize($$.type); 
+char a[30]; sprintf(a,"%d",$$.sym->initial.intval); quads.emit($$.sym->name,a);
+char c[30]; quads.emit(Q_MULT,$$.sym->name,$$.sym->name,$3.sym->name);  $$.type=$$.type->next; quads.emit(Q_PLUS,$$.sym->name,$$.sym->name,$1.sym->name); $$.id_sym=$1.id_sym;}
 
 argument_expression_list_opt:{$$=0;}
 						  |argument_expression_list{$$=$1;}

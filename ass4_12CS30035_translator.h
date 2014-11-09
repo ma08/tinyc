@@ -57,6 +57,7 @@ struct symrow{
   struct Type type;
   int size;
   int offset;
+  int ebp_offset;
   union Init initial;
   Symboltable* nested_table;
 
@@ -147,7 +148,7 @@ struct symrow{
         printf("| NULL");
         break;
     }
-    printf("| %d | %d",size,offset);
+    printf("| %d | %d | %d ",size,offset,ebp_offset);
     if(type.typ==T_FUNCTION){
       printf("| %p",nested_table);
     }else{
@@ -166,6 +167,7 @@ class Symboltable{
     void update(char* name,struct Type type,int size,int offset,union Init initial);
     void print();
     bool exists(const char * s);
+    void activationRecord();
     struct symrow arr[MAX];
     int tempcount ;
     int size;
@@ -185,7 +187,7 @@ class Quad{
     char res[15];
 
     void print();
-    void conv2x86();
+    void conv2x86(int x,vector<int>& labels);
  
 };
 
