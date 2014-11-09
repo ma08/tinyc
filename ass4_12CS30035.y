@@ -488,8 +488,9 @@ assignment_expression:
             { $$.sym=$1.sym;
               if($3.isBexp){
                   backpatch($3.truelist,quads.size);
-                  backpatch($3.falselist,quads.size+1);
+                  backpatch($3.falselist,quads.size+2);
                   quads.emit($1.sym->name,TRUE_VAL); 
+                  quads.emit(Q_GOTO,quads.size+2); 
                   quads.emit($1.sym->name,FALSE_VAL); 
               }else{
 

@@ -6,18 +6,17 @@ int printd(float a);*/
 
 int printi(int a);
 
-/*int fib(int x){
+int fib(int x){
 int i=0;
 if(x==i || x==1){
 return 1;
 }
 return fib(x-1)+fib(x-2);
-}*/
+}
 
 int main(){
 int b[9];
-int i=4,j;
-j=b[i];
+int i=4,j=9;
 /*for(i=0;i<2;i++){
   for(j=0;j<2;j++){
     b[i][j]=i+j;
@@ -28,7 +27,7 @@ for(i=0;i<2;i++){
     printi(b[i][j]);
   }
 }*/
-for (i = 0; i < 9; ++i)
+/*for (i = 0; i < 9; ++i)
 {
   b[i]=i;
   
@@ -38,7 +37,9 @@ for (i = 0; i < 9; ++i)
 {
   x=(b[i]);
   printi(x);
-  
-}
+}*/
+i=i<j;
+
+printi(i);
 return 0;
 }
