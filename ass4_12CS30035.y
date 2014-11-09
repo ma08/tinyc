@@ -152,19 +152,17 @@ primary_expression:
 
             switch($1.type){
               case T_INT:
-                /*printf("kkkkkkkkkkkkk%d",$1.ival);*/
                 $$.sym->initial.intval=$1.ival;
                 sprintf(a,"%d",$1.ival);
                 quads.emit($$.sym->name,a);
-                
                 break;
               case T_DOUBLE:
                 $$.sym->initial.doubleval=$1.dval;
                 break;
               case T_CHAR:
                 $$.sym->initial.charval=$1.cval;
+                sprintf(a,"%d",$1.cval);
                 quads.emit($$.sym->name,a);
-                sprintf(a,"%c",$1.cval);
                 break;
               default:
                 break;
@@ -177,7 +175,7 @@ constant:
 		INT_CONST { $$.type=T_INT; $$.ival=$1;}
 		|DOUBLE_CONST {$$.type=T_DOUBLE; $$.dval = $1;}
 		/*|ENUMARATION_CONSTANT*/
-		|CHAR_CONST {$$.type=T_CHAR; $$.cval=$1;}
+		|CHAR_CONST {$$.type=T_CHAR; $$.cval=$1; /*printf("--------------%c----------",$1);*/}
 		;
 postfix_expression:
           primary_expression {$$=$1; /*$$->print();*/}

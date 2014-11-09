@@ -14,6 +14,19 @@ enum Tp lastType;
 //int pointed;
 int offset=0;
 
+enum Tp innerType(struct Type* t){
+
+  //printf("\n\t------%d-------",t->typ);
+  if(t->typ==T_POINTER)
+    return T_POINTER;
+
+  while(t->typ==T_POINTER||t->typ==T_ARRAY){
+    t=t->next;
+  }
+  return t->typ;
+
+}
+
 char* lastFunction;
 Symboltable globalSymbolTable;
 Symboltable* currentSymbolTable = &globalSymbolTable;
@@ -491,6 +504,7 @@ void Quad::conv2x86(int x,vector<int>& labels){
       printf("\n\t.globl %s",this->res);
       printf("\n\t.type %s, @function",this->res);
       st=globalSymbolTable.lookup(this->res)->nested_table;
+      currentSymbolTable=st;
       lastfun=this->res;
       for (i = 0; i < st->size; ++i)
       {
@@ -540,22 +554,35 @@ void Quad::conv2x86(int x,vector<int>& labels){
       printf("\n\tmovl %%eax, _%s$(%%ebp)",this->res);
       break;
     case Q_ARRACC:
+      
       if(isNumber(this->arg2)){
         printf("\n\tmovl $%s, %%eax",this->arg2);
       }else{
         printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg2);
       }
+
+      if(innerType(&currentSymbolTable->lookup(this->arg1)->type)==T_CHAR){
+        printf("\n\tmovzbl _%s$(%%ebp,%%eax,1), %%eax",this->arg1);
+        printf("\n\tmovb %%al, _%s$(%%ebp)",this->res);
+        break;
+      }
+
       printf("\n\tmovl _%s$(%%ebp,%%eax,1), %%edx",this->arg1);
       printf("\n\tmovl %%edx, _%s$(%%ebp)",this->res);
       break;
     case Q_ARR_COPY:
       if(isNumber(this->arg1)){
-        printf("\n\tmovl $%s, %%eax",this->arg1);
+        printf("\n\tmovl $%s, %%edx",this->arg1);
       }else{
-        printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
+        printf("\n\tmovl _%s$(%%ebp), %%edx",this->arg1);
       }
-      printf("\n\tmovl _%s$(%%ebp), %%edx",this->arg2);
-      printf("\n\tmovl %%edx, _%s$(%%ebp,%%eax,1)",this->res);
+      if(innerType(&currentSymbolTable->lookup(this->arg1)->type)==T_CHAR){
+        printf("\n\tmovzbl _%s$(%%ebp), %%eax",this->arg2);
+        printf("\n\tmovb %%al, _%s$(%%ebp,%%edx,1)",this->res);
+        break;
+      }
+      printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg2);
+      printf("\n\tmovl %%eax, _%s$(%%ebp,%%edx,1)",this->res);
       break;
     case Q_DEREF:
       printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg1);
@@ -584,7 +611,11 @@ void Quad::conv2x86(int x,vector<int>& labels){
       break;
 
     case Q_PARAM:
-      printf("\n\tmovl _%s$(%%ebp), %%eax",this->res);
+      if(currentSymbolTable->lookup(this->res)->type.typ==T_ARRAY){
+        printf("\n\tleal _%s$(%%ebp), %%eax",this->res);
+      }else{
+        printf("\n\tmovl _%s$(%%ebp), %%eax",this->res);
+      }
       printf("\n\tpush %%eax");
       break;
     case Q_RET:
@@ -598,6 +629,15 @@ void Quad::conv2x86(int x,vector<int>& labels){
       printf("\n\tmovl %%eax, _%s$(%%ebp)",this->res);
       break;
     case Q_COPY:
+      if(currentSymbolTable->lookup(this->res)->type.typ==T_CHAR){
+        if(isNumber(this->arg1)){
+          printf("\n\tmovb $%s, _%s$(%%ebp)",this->arg1,this->res);
+          break;
+        }
+        printf("\n\tmovzbl _%s$(%%ebp), %%eax",this->arg1);
+        printf("\n\tmovb %%al, _%s$(%%ebp)",this->res);
+        break;
+      }
       if(isNumber(this->arg1)){
         printf("\n\tmovl $%s, _%s$(%%ebp)",this->arg1,this->res);
         break;
