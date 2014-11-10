@@ -193,8 +193,8 @@ class Quad{
     char arg2[15];
     char res[15];
 
-    void print();
-    void conv2x86(int x,vector<int>& labels);
+    void print(FILE* fp=stdout);
+    void conv2x86(int x,vector<int>& labels,FILE *fp=stdout);
 
  
 };
@@ -208,8 +208,8 @@ class QuadArr{
     void emit(int op, int num);
     void emit(char *r, char* a);
     void emit(char *r, int num);
-    void print();
-    void gen2x86();
+    void print(FILE *fp=stdout);
+    void gen2x86(FILE *fp=stdout);
 
     friend void backpatch(const vector<int>* p, int label);
 
