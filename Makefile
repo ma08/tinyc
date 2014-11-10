@@ -6,9 +6,9 @@ ass2_12CS30035.o:	ass2_12CS30035.c my1.h
 	cc -Wall -m32 -c ass2_12CS30035.c
 tcgoutput.o: tcgoutput.s
 	g++ -m32 -c tcgoutput.s
-quadoutput.out: outputfile
+quadoutput.out: outputfile ass4_12CS30035_test.c
 	 ./outputfile	< ass4_12CS30035_test.c
-tcgoutput.s: outputfile
+tcgoutput.s: outputfile ass4_12CS30035_test.c
 	./outputfile < ass4_12CS30035_test.c
 outputfile: lex.yy.o y.tab.o ass4_12CS30035_target_translator.o ass4_12CS30035_translator.o
 	g++  -o outputfile lex.yy.o y.tab.o ass4_12CS30035_target_translator.o ass4_12CS30035_translator.o -lfl
@@ -29,4 +29,4 @@ y.tab.h: ass4_12CS30035.y
 	yacc -dtv ass4_12CS30035.y
 
 clean:
-	rm ass4_12CS30035_target_translator.o ass4_12CS30035_translator.o y.output outputfile ass4_12CS30035_translator.h.gch lex.yy.o y.tab.o lex.yy.c y.tab.c y.tab.h tcgoutput.o tcgoutput.s quadoutput.out ass2_12CS30035.o a.out
+	rm ass4_12CS30035_target_translator.o ass4_12CS30035_translator.o y.output outputfile ass4_12CS30035_translator.h.gch lex.yy.o y.tab.o lex.yy.c y.tab.c y.tab.h tcgoutput.o tcgoutput.s quadoutput.out ass2_12CS30035.o a.out libass2_12CS30035.a
