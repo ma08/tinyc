@@ -22,6 +22,7 @@ void yyerror(char *s);
           double dval;
           int   ival;
           char cval;
+          char* strval;
       };
   };
   struct array_type{
@@ -168,7 +169,12 @@ primary_expression:
                 break;
             }
          }
-				 |STR_LITERAL{}
+				 |STR_LITERAL{ 
+                $$.sym=currentSymbolTable->gentemp(T_STRLIT);
+                int len=strlen($1);
+                $$.sym->initial.strval=new char[len+1];;
+                strcpy($$.sym->initial.strval,$1);
+        }
 				 | '(' expression ')' {$$=$2;}
 				  ;
 constant:
@@ -501,6 +507,10 @@ assignment_expression:
 					 conditional_expression {$$=$1;}
 					 |unary_expression assignment_operator assignment_expression
             { $$.sym=$1.sym;
+              struct symrow *t =$3.sym;
+            if($3.sym->type.typ==T_STRLIT){
+              quads.emit($1.sym->name,t->name);
+            }else{
               if($3.isBexp){
                   backpatch($3.truelist,quads.size);
                   backpatch($3.falselist,quads.size+2);
@@ -509,7 +519,6 @@ assignment_expression:
                   quads.emit($1.sym->name,FALSE_VAL); 
               }else{
 
-              struct symrow *t =$3.sym;
               if($1.sym->type.typ==T_INT){
                 t=xtoInt($3.sym);
               }
@@ -520,6 +529,7 @@ assignment_expression:
                 t=xtoDouble($3.sym);
               }
               quads.emit($1.sym->name,t->name);
+            }
             }
           }
            |array_expression assignment_operator assignment_expression 

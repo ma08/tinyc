@@ -27,6 +27,8 @@ enum Tp innerType(struct Type* t){
 
 }
 
+int str_const=0;
+
 char* lastFunction;
 Symboltable globalSymbolTable;
 Symboltable* currentSymbolTable = &globalSymbolTable;
@@ -524,10 +526,18 @@ void Quad::conv2x86(int x,vector<int>& labels){
   }
   switch(this->op){
     case Q_FUNCSTART:
-      printf("\n\t.globl %s",this->res);
-      printf("\n\t.type %s, @function",this->res);
       st=globalSymbolTable.lookup(this->res)->nested_table;
       currentSymbolTable=st;
+      for (i = 0; i < st->size; ++i){
+        if(st->arr[i].type.typ==T_STRLIT){
+          printf("\n.LC%d:",str_const);
+          st->arr[i].strnum=str_const++;
+          printf("\n\t.string %s",st->arr[i].initial.strval);
+        }
+      }
+      printf("\n\t.text");
+      printf("\n\t.globl %s",this->res);
+      printf("\n\t.type %s, @function",this->res);
       lastfun=this->res;
       for (i = 0; i < st->size; ++i)
       {
@@ -668,6 +678,8 @@ void Quad::conv2x86(int x,vector<int>& labels){
           printf("\n\tmovl _%s$(%%ebp), %%eax",this->res);
       }
       printf("\n\tpush %%eax");
+	
+      //printf("\n\tmovl	%%eax, (%%esp)");
       break;
     case Q_RET:
       if(this->res[0]!='\0'){
@@ -680,6 +692,10 @@ void Quad::conv2x86(int x,vector<int>& labels){
       printf("\n\tmovl %%eax, _%s$(%%ebp)",this->res);
       break;
     case Q_COPY:
+      if(currentSymbolTable->lookup(this->arg1)->type.typ==T_STRLIT){
+          printf("\n\tmovl $.LC%d, _%s$(%%ebp)",currentSymbolTable->lookup(this->arg1)->strnum,this->res);
+          break;
+      }
       if(currentSymbolTable->lookup(this->res)->type.typ==T_CHAR){
         if(isNumber(this->arg1)){
           printf("\n\tmovb $%s, _%s$(%%ebp)",this->arg1,this->res);

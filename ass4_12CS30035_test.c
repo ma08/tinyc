@@ -16,17 +16,21 @@ return fib(x-1)+fib(x-2);
 }
 
 int reverse(char *c){
+  prints(c);
   int i=0,j;
   while(c[i]!=0)
     i++;
-  j=0;
+  printi(i);
   i--;
-  char temp;
+  j=0;
+  /*char temp;
   while(i>=j){
     temp=c[j];
     c[j++]=c[i];
     c[i--]=temp;
-  }
+  }*/
+  c[0]='i';
+  prints(c);
   return 0;
 }
 
@@ -49,13 +53,16 @@ int main(){
   b=&c;
   d=**b;
   printi(d);*/
+  char *d = "Adfaaajkafasfd";
+  char *e = "Adfaaaaaaaaajkafasfd";
   char c[4];
   c[0]='a';
   c[1]='b';
   c[2]='c';
   c[3]=0;
-  reverse(c);
-  prints(c);
+  /*reverse(c);*/
+  reverse(d);
+
   
 /*for(i=0;i<2;i++){
   for(j=0;j<2;j++){

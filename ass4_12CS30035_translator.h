@@ -25,7 +25,7 @@ enum Opcode{
 
 };
 enum Tp{
-  T_VOID = 0, T_INT = 1, T_DOUBLE = 2, T_CHAR = 3, T_FUNCTION =4, T_POINTER=5, T_ARRAY = 6
+  T_VOID = 0, T_INT = 1, T_DOUBLE = 2, T_CHAR = 3, T_FUNCTION =4, T_POINTER=5, T_ARRAY = 6, T_STRLIT=7
 };
 
 
@@ -45,6 +45,7 @@ union Init{
   double doubleval;
   char charval;
   void* pointval;
+  char* strval;
 };
 
 class Symboltable;
@@ -59,6 +60,7 @@ struct symrow{
   int ebp_offset;
   union Init initial;
   Symboltable* nested_table;
+  int strnum;
 
   symrow():type(),size(size_int),initial(){}
 
@@ -109,6 +111,9 @@ struct symrow{
       return;
     }
     switch(t->typ){
+      case T_STRLIT:
+        printf("STRLIT");
+        break;
       case T_INT:
         printf("INT");
         break;
@@ -142,6 +147,9 @@ struct symrow{
         break;
       case T_CHAR:
         printf("| %c",initial.charval);
+        break;
+      case T_STRLIT:
+        printf("| %s",initial.strval);
         break;
       default:
         printf("| NULL");
@@ -187,6 +195,7 @@ class Quad{
 
     void print();
     void conv2x86(int x,vector<int>& labels);
+
  
 };
 
