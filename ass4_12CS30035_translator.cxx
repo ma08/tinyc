@@ -628,7 +628,7 @@ void Quad::conv2x86(int x,vector<int>& labels){
           printf("\n\tmovb %%al, (%%edx)");
         }else{
           printf("\n\tmovl _%s$(%%ebp), %%eax",this->arg2);
-          printf("\n\tmovb %%edx, (%%edx)");
+          printf("\n\tmovl %%eax, (%%edx)");
         }
         break;
       }
