@@ -15,33 +15,36 @@ return 1;
 return fib(x-1)+fib(x-2);
 }
 
-int reverse(int *a){
+int reverse(int *a,int n){
   /*prints(c);*/
-  /*char temp;
+  int i=n-1,j=0;
+  int temp;
   while(i>=j){
-    temp=c[j];
-    c[j++]=c[i];
-    c[i--]=temp;
-  }*/
-  a[0]=1;
+    temp=a[j];
+    a[j++]=a[i];
+    a[i--]=temp;
+  }
+  /*printi(b);*/
+  /*printi(c);*/
   return 0;
 }
 
-int ccc(char x,int i){
-  int j;
-  char h;
-  j=i++;
-  h=x--;
-  return 0;
-}
+
 
 int main(){
   int i,j;
-  int a[3];
-  a[0]=44;
-  printi(a[0]);
-  reverse(a);
-  printi(a[0]);
+  int a[8];
+  for (i = 0; i < 8; ++i)
+  {
+    a[i]=i;
+    
+  }
+  reverse(a,8);
+  for (i = 0; i < 8; ++i)
+  {
+    printi(a[i]);
+    
+  }
   /*int b[2][2];*/
   /*int a=5;
   int d;

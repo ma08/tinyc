@@ -14,6 +14,9 @@ enum Tp lastType;
 //int pointed;
 int offset=0;
 
+struct symrow* param_stack[20];
+int param_size=0;
+
 enum Tp innerType(struct Type* t){
 
   //printf("\n\t------%d-------",t->typ);
@@ -622,7 +625,7 @@ void Quad::conv2x86(int x,vector<int>& labels){
       }
       if(currentSymbolTable->lookup(this->res)->type.typ==T_POINTER){
         printf("\n\tmovl _%s$(%%ebp), %%eax",this->res);
-        printf("\n\tleal (%%edx,%%eax,1), %%edx");
+        printf("\n\tleal (%%eax,%%edx,1), %%edx");
         if(currentSymbolTable->lookup(this->res)->type.next->typ==T_CHAR){
           printf("\n\tmovzbl _%s$(%%ebp), %%eax",this->arg2);
           printf("\n\tmovb %%al, (%%edx)");
@@ -667,18 +670,7 @@ void Quad::conv2x86(int x,vector<int>& labels){
       break;
 
     case Q_PARAM:
-      if(currentSymbolTable->lookup(this->res)->type.typ==T_ARRAY){
-        printf("\n\tleal _%s$(%%ebp), %%eax",this->res);
-      }else{
-        if(currentSymbolTable->lookup(this->res)->type.typ==T_CHAR){
-          printf("\n\tmovzbl _%s$(%%ebp), %%eax",this->res);
-	        printf("movsbl	%%al, %%eax");
-          printf("\n\tpush %%eal");
-        }else
-          printf("\n\tmovl _%s$(%%ebp), %%eax",this->res);
-      }
-      printf("\n\tpush %%eax");
-	
+      param_stack[param_size++]=currentSymbolTable->lookup(this->res);
       //printf("\n\tmovl	%%eax, (%%esp)");
       break;
     case Q_RET:
@@ -688,6 +680,21 @@ void Quad::conv2x86(int x,vector<int>& labels){
       printf("\n\tjmp .L1ex%s",lastfun);
       break;
     case Q_FUNCALL:
+      for(i=param_size-1 ; i>=0 ; i--){
+
+        if(param_stack[i]->type.typ==T_ARRAY){
+         printf("\n\tleal _%s$(%%ebp), %%eax",param_stack[i]->name);
+        }else{
+          if(param_stack[i]->type.typ==T_CHAR){
+            printf("\n\tmovzbl _%s$(%%ebp), %%eax",param_stack[i]->name);
+            printf("movsbl	%%al, %%eax");
+            printf("\n\tpush %%eal");
+          }else
+            printf("\n\tmovl _%s$(%%ebp), %%eax",param_stack[i]->name);
+        }
+      printf("\n\tpush %%eax");  
+      }
+      param_size=0;
       printf("\n\tcall %s",this->arg1);
       printf("\n\tmovl %%eax, _%s$(%%ebp)",this->res);
       break;
