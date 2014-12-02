@@ -27,6 +27,5 @@ y.tab.c: ass4_12CS30035.y
 	yacc -dtv ass4_12CS30035.y
 y.tab.h: ass4_12CS30035.y
 	yacc -dtv ass4_12CS30035.y
-
 clean:
 	rm ass4_12CS30035_target_translator.o ass4_12CS30035_translator.o y.output outputfile ass4_12CS30035_translator.h.gch lex.yy.o y.tab.o lex.yy.c y.tab.c y.tab.h tcgoutput.o tcgoutput.s quadoutput.out ass2_12CS30035.o a.out libass2_12CS30035.a
