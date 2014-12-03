@@ -12,22 +12,22 @@ Check out the Makefile to get a hang of the process.
 
 The input file is to be named as ass4_12CS30035_test.c to be compiled
 
-##Stage 1: Lexical Analysis (generating tokens)
+###Stage 1: Lexical Analysis (generating tokens)
 Done using flex. The rules are defined in the .l file.
 
-##Stage2: Parsing (grammar) using Bison
+###Stage2: Parsing (grammar) using Bison
 The grammar and the corresponding actions are defined in .y file
 The symboltable and the quad classes are defined in the translator.h file
 
-##Stage 3: 3 Address Code Generation. Stage 2 and 3 are simultaneous
+###Stage 3: 3 Address Code Generation. Stage 2 and 3 are simultaneous
 The 3AC is generated for each operation. These are stored as quads in the 
 quadarray. The quads are written to the `quadoutput.out` file
 
-##Stage 4: Assembly Code Generation (using GAS - GNU Assembler ) - Intel stntax
+###Stage 4: Assembly Code Generation (using GAS - GNU Assembler ) - Intel stntax
 Assembly code is generated for each quad. The generating function is in the 
 target_translator.cpp file. The assembly is written to the tcgoutput.s file
 
-##Stage 5: Compiling the Assembly code into executable file
+###Stage 5: Compiling the Assembly code into executable file
 The Assembly code is compiled by the gcc along with a library(for reading 
 and writing) into the executable a.out file which is to be run to execute 
 the program
